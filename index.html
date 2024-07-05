@@ -148,7 +148,6 @@
             <div id="signature">
                 <canvas></canvas>
             </div>
-            <button type="submit">Gerar PDF</button>
         </form>
     </div>
     <div id="cropFrame">
@@ -333,6 +332,10 @@
                     const img = new Image();
                     img.src = event.target.result;
                     img.classList.add('preview');
+                    
+                    // Abrir o frame de recorte ao carregar a imagem
+                    openCropFrame(img);
+
                     img.addEventListener('click', function () {
                         openCropFrame(img); // Abrir o frame de recorte ao clicar na imagem
                     });
