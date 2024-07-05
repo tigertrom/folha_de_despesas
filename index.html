@@ -216,7 +216,7 @@
             form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
 
             // Adicionar assinatura ao PDF
-            const signature = form.getSignature('signature');
+            const signature = form.getSignature('Solicitante');
             const signatureImageBytes = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result.split(',')[1]);
