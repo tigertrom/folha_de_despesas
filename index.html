@@ -1,5 +1,3 @@
-GitHub
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -230,17 +228,23 @@ GitHub
             });
 
             // Adicionar imagens anexadas
-            const imageInputs = document.querySelectorAll('.preview img');
-            for (const img of imageInputs) {
+            const imagePreviews = document.querySelectorAll('.preview img');
+            for (const img of imagePreviews) {
                 const imageUrl = img.src;
                 const imageBytes = await fetch(imageUrl).then(res => res.arrayBuffer());
                 const embeddedImage = await pdfDoc.embedJpg(imageBytes);
-firstPage.drawImage(embeddedImage, {
-    x: 50,
-    y: 400,
-    width: width,
-    height: height
-});
+
+                // Obter as dimensões do canvas recortado
+                const width = img.width;
+                const height = img.height;
+
+                // Desenhar a imagem no PDF com as dimensões do canvas recortado
+                firstPage.drawImage(embeddedImage, {
+                    x: 50,
+                    y: 400,
+                    width: width,
+                    height: height
+                });
             }
 
             // Salvar o PDF
@@ -274,15 +278,7 @@ firstPage.drawImage(embeddedImage, {
         });
 
         document.getElementById('cropButton').addEventListener('click', () => {
-            const canvas = cropper.getCroppedCanvas();
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            const preview = document.createElement('div');
-            preview.classList.add('preview');
-            preview.innerHTML = `<img src="${dataUrl}" /><button onclick="removeFile(this)">X</button>`;
-            fileList.appendChild(preview);
-            document.getElementById('cropFrame').style.display = 'none';
-            cropper.destroy();
-            cropper = null;
+            cropper.crop();
         });
 
         document.getElementById('rotateLeftButton').addEventListener('click', () => {
@@ -296,11 +292,21 @@ firstPage.drawImage(embeddedImage, {
         document.getElementById('applyCropButton').addEventListener('click', () => {
             const canvas = cropper.getCroppedCanvas();
             const dataUrl = canvas.toDataURL('image/jpeg');
+
+            // Obter as dimensões do canvas recortado
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Criar elemento de visualização com imagem recortada
             const preview = document.createElement('div');
             preview.classList.add('preview');
             preview.innerHTML = `<img src="${dataUrl}" /><button onclick="removeFile(this)">X</button>`;
             fileList.appendChild(preview);
+
+            // Esconder o frame de recorte
             document.getElementById('cropFrame').style.display = 'none';
+
+            // Limpar o cropper
             cropper.destroy();
             cropper = null;
         });
