@@ -228,18 +228,37 @@
             });
 
             // Adicionar imagens anexadas
-            const imageInputs = document.querySelectorAll('.preview img');
-            for (const img of imageInputs) {
-                const imageUrl = img.src;
-                const imageBytes = await fetch(imageUrl).then(res => res.arrayBuffer());
-                const embeddedImage = await pdfDoc.embedJpg(imageBytes);
-                const imgWidth = embeddedImage.width;
-                const imgHeight = embeddedImage.height;
-                firstPage.drawImage(embeddedImage, {
-                    x: 50,
-                    y: 400,
-                    width: imgWidth,
-                    height: imgHeight
+                        const images = Array.from(fileList.querySelectorAll('.preview img'));
+            if (images.length > 0) {
+                const imageFieldPositions = {
+                    "NOTA 1": { x: 70, y: 120 },
+                    "NOTA 2": { x: 320, y: 120 }
+                };
+                const maxImageWidth = 250;
+                const maxImageHeight = 500;
+
+                for (let i = 0; i < images.length; i++) {
+                    const img = images[i];
+                    const src = img.src;
+                    const imageBytes = await fetch(src).then(res => res.arrayBuffer());
+                    let image;
+                    if (src.startsWith('data:image/jpeg')) {
+                        image = await pdfDoc.embedJpg(imageBytes);
+                    } else {
+                        image = await pdfDoc.embedPng(imageBytes);
+                    }
+
+                    const dimensions = image.scale(1);
+                    const scale = Math.min(maxImageWidth / dimensions.width, maxImageHeight / dimensions.height);
+                    const scaledWidth = dimensions.width * scale;
+                    const scaledHeight = dimensions.height * scale;
+
+                    const position = imageFieldPositions[`NOTA ${i + 1}`];
+                    firstPage.drawImage(image, {
+                        x: position.x,
+                        y: position.y,
+                        width: scaledWidth,
+                        height: scaledHeight,
                 });
             }
 
