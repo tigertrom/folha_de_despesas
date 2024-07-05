@@ -34,6 +34,9 @@
         #fileList {
             text-align: left;
             margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         .preview {
             display: inline-block;
@@ -43,6 +46,7 @@
             object-fit: cover;
             margin: 5px;
             overflow: hidden;
+            cursor: pointer;
         }
         .preview img {
             width: 100%;
@@ -194,6 +198,7 @@
                 return res.arrayBuffer();
             });
             const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+            const firstPage = pdfDoc.getPages()[0];
             const form = pdfDoc.getForm();
 
             // Obter dados do formulário
@@ -339,6 +344,11 @@
                     });
 
                     fileList.appendChild(img);
+
+                    // Permitir reedição da imagem ao clicar nela na lista
+                    img.addEventListener('click', function() {
+                        openCropFrame(img);
+                    });
                 };
                 reader.readAsDataURL(file);
             });
