@@ -203,31 +203,29 @@
             const tipoDespesa = formData.get('tipoDespesa');
             const motivoDespesa = formData.get('motivoDespesa');
             const autorDespesa = formData.get('autorDespesa');
-            const banco = formData.get('banco');
-            const classificacao = formData.get('classificacao');
+            const banco = formData.get('banco') || '';
+            const classificacao = formData.get('classificacao') || '';
 
-            // Preencher campos do formulário no PDF
-            form.getTextField('VALOR R$').setText(valor);
-            form.getTextField('DATA DA DESPESA').setText(dataDespesa);
-            form.getTextField('TIPO DE DESPESA').setText(tipoDespesa);
-            form.getTextField('MOTIVO DA DESPESA').setText(motivoDespesa);
-            form.getTextField('AUTOR DA DESPESA').setText(autorDespesa);
-            form.getTextField('BANCO').setText(banco);
-            form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
+            // Preencher o formulário PDF
+            form.getTextField('valor').setText(valor);
+            form.getTextField('dataDespesa').setText(dataDespesa);
+            form.getTextField('tipoDespesa').setText(tipoDespesa);
+            form.getTextField('motivoDespesa').setText(motivoDespesa);
+            form.getTextField('autorDespesa').setText(autorDespesa);
+            form.getTextField('banco').setText(banco);
+            form.getTextField('classificacao').setText(classificacao);
 
-            // Adicionar assinatura
-            const signatureImageBytes = await signaturePad.toDataURL();
-            const signatureImage = await pdfDoc.embedPng(signatureImageBytes);
-            const firstPage = pdfDoc.getPage(0);
-            const signaturePosition = { x: 400, y: 50, width: 150, height: 50 };
-            firstPage.drawImage(signatureImage, {
-                x: signaturePosition.x,
-                y: signaturePosition.y,
-                width: signaturePosition.width,
-                height: signaturePosition.height,
+            // Adicionar assinatura ao PDF
+            const signature = form.getSignature('signature');
+            const signatureImageBytes = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(signaturePad.toDataURL());
             });
+            signature.setImageFromBase64(signatureImageBytes);
 
-            // Adicionar imagens anexadas
+            // Adicionar imagens ao PDF
             const images = Array.from(fileList.querySelectorAll('.preview img'));
             if (images.length > 0) {
                 const imageFieldPositions = {
@@ -237,7 +235,7 @@
                 const maxImageWidth = 250;
                 const maxImageHeight = 500;
 
-                for (let i = 0; i < images.length && i < 2; i++) {  // Limitar a dois para adicionar até duas imagens
+                for (let i = 0; i < images.length; i++) {
                     const img = images[i];
                     const src = img.src;
                     const imageBytes = await fetch(src).then(res => res.arrayBuffer());
@@ -253,7 +251,7 @@
                     const scaledWidth = dimensions.width * scale;
                     const scaledHeight = dimensions.height * scale;
 
-                    const position = imageFieldPositions[`NOTA ${i + 1}`];  // Selecionar a posição baseada no índice
+                    const position = imageFieldPositions[`NOTA ${i + 1}`];
                     firstPage.drawImage(image, {
                         x: position.x,
                         y: position.y,
@@ -264,121 +262,89 @@
             }
 
             // Salvar o PDF modificado
-            const pdfBytesModified = await pdfDoc.save();
+            const pdfBytesFinal = await pdfDoc.save();
 
-            // Criar URL para download do PDF
-            const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-
-            // Criar link de download
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'espelho_de_despesas.pdf';
-            document.body.appendChild(a);
-            a.click();
-            URL.revokeObjectURL(url);
+            // Download do PDF
+            const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'espelho_despesas.pdf';
+            link.click();
         });
 
-        async function addFile() {
-            const fileUpload = document.getElementById('fileUpload');
-            const files = fileUpload.files;
-            const fileList = document.getElementById('fileList');
-
-            for (const file of files) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const preview = document.createElement('div');
-                    preview.classList.add('preview');
-
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = function () {
-                        URL.revokeObjectURL(img.src);
-                    };
-
-                    const button = document.createElement('button');
-                    button.textContent = 'Remover';
-                    button.addEventListener('click', function () {
-                        preview.remove();
-                    });
-
-                    // Adicionar evento para abrir o frame de recorte ao clicar na imagem
-                    img.addEventListener('click', function () {
-                        openCropFrame(img);
-                    });
-
-                    preview.appendChild(img);
-                    preview.appendChild(button);
-                    fileList.appendChild(preview);
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
+        let currentImage = null;
         let cropper = null;
-        const cropFrame = document.getElementById('cropFrame');
-        const cropImage = document.getElementById('cropImage');
-        const cropButton = document.getElementById('cropButton');
-        const rotateLeftButton = document.getElementById('rotateLeftButton');
-        const rotateRightButton = document.getElementById('rotateRightButton');
-        const applyCropButton = document.getElementById('applyCropButton');
 
         function openCropFrame(img) {
+            currentImage = img;
+            const cropImage = document.getElementById('cropImage');
             cropImage.src = img.src;
-            cropper = new Cropper(cropImage, {
-                aspectRatio: 1 / 1,
-                viewMode: 1,
-            });
-            cropFrame.style.display = 'flex';
+
+            document.getElementById('cropFrame').style.display = 'flex';
+
+            if (cropper) {
+                cropper.replace(img.src);
+            } else {
+                cropper = new Cropper(cropImage, {
+                    aspectRatio: NaN, // Configurar a proporção desejada (NaN para livre)
+                    viewMode: 1,
+                    autoCrop: true,
+                    movable: true,
+                    zoomable: true,
+                    rotatable: true,
+                    guides: true,
+                    background: false,
+                    crop(event) {
+                        // Callback de recorte
+                    },
+                });
+            }
         }
 
-        cropButton.addEventListener('click', function () {
-            if (cropper) {
-                cropper.crop();
-            }
+        document.getElementById('cropButton').addEventListener('click', function() {
+            cropper.crop();
         });
 
-        rotateLeftButton.addEventListener('click', function () {
-            if (cropper) {
-                cropper.rotate(-90);
-            }
+        document.getElementById('rotateLeftButton').addEventListener('click', function() {
+            cropper.rotate(-90);
         });
 
-        rotateRightButton.addEventListener('click', function () {
-            if (cropper) {
-                cropper.rotate(90);
-            }
+        document.getElementById('rotateRightButton').addEventListener('click', function() {
+            cropper.rotate(90);
         });
 
-        applyCropButton.addEventListener('click', function () {
-            if (cropper) {
-                const canvas = cropper.getCroppedCanvas({
-                    maxWidth: 250,
-                    maxHeight: 500,
-                });
-                const croppedImageSrc = canvas.toDataURL();
-                const cropPreview = document.createElement('div');
-                cropPreview.classList.add('preview');
+        document.getElementById('applyCropButton').addEventListener('click', async function() {
+            const canvas = cropper.getCroppedCanvas();
+            const croppedImage = canvas.toDataURL(); // Imagem recortada como base64
 
-                const croppedImg = new Image();
-                croppedImg.src = croppedImageSrc;
+            // Substituir a imagem original pela recortada na lista de arquivos
+            currentImage.src = croppedImage;
 
-                const button = document.createElement('button');
-                button.textContent = 'Remover';
-                button.addEventListener('click', function () {
-                    cropPreview.remove();
-                });
-
-                cropPreview.appendChild(croppedImg);
-                cropPreview.appendChild(button);
-                fileList.appendChild(cropPreview);
-
-                cropFrame.style.display = 'none';
-                cropper.destroy();
-                cropper = null;
-            }
+            // Fechar o frame de recorte
+            document.getElementById('cropFrame').style.display = 'none';
         });
+
+        function addFile() {
+            const input = document.getElementById('fileUpload');
+            const fileList = document.getElementById('fileList');
+
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.classList.add('preview');
+                    img.addEventListener('click', function () {
+                        openCropFrame(img); // Abrir o frame de recorte ao clicar na imagem
+                    });
+
+                    fileList.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            input.value = ''; // Limpar o input de arquivos após o envio
+        }
     </script>
 </body>
 </html>
