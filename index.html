@@ -221,14 +221,14 @@
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
             firstPage.drawImage(signatureImage, {
-                x: 400,
-                y: 30,
-                width: 200,
-                height: 50
+                x: 380,
+                y: 70,
+                width: 150,
+                height: 50,
             });
 
             // Adicionar imagens anexadas
-                        const images = Array.from(fileList.querySelectorAll('.preview img'));
+            const images = Array.from(fileList.querySelectorAll('.preview img'));
             if (images.length > 0) {
                 const imageFieldPositions = {
                     "NOTA 1": { x: 70, y: 120 },
@@ -259,74 +259,54 @@
                         y: position.y,
                         width: scaledWidth,
                         height: scaledHeight,
-                });
-            }
-
-            // Salvar o PDF
-            const pdfBytesFinal = await pdfDoc.save();
-            const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            window.open(url);
-
-            clearForm();
-        });
-
-        // Cropper
-        let cropper;
-        let currentFile;
-        document.getElementById('fileUpload').addEventListener('change', (event) => {
-            const files = event.target.files;
-            if (files.length > 0) {
-                currentFile = files[0];
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const imageUrl = e.target.result;
-                    document.getElementById('cropImage').src = imageUrl;
-                    document.getElementById('cropFrame').style.display = 'flex';
-                    cropper = new Cropper(document.getElementById('cropImage'), {
-                        aspectRatio: NaN,
-                        viewMode: 1
                     });
-                };
-                reader.readAsDataURL(currentFile);
+                }
             }
-        });
 
-        document.getElementById('cropButton').addEventListener('click', () => {
-            cropper.crop();
+            // Salvar o PDF modificado
+            const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+            const pdfOutput = document.createElement('iframe');
+            pdfOutput.src = pdfDataUri;
+            pdfOutput.style.width = '100%';
+            pdfOutput.style.height = '600px';
+            pdfOutput.style.border = 'none';
+            document.body.appendChild(pdfOutput);
         });
-
-        document.getElementById('rotateLeftButton').addEventListener('click', () => {
-            cropper.rotate(-90);
-        });
-
-        document.getElementById('rotateRightButton').addEventListener('click', () => {
-            cropper.rotate(90);
-        });
-
-        document.getElementById('applyCropButton').addEventListener('click', () => {
-            const canvas = cropper.getCroppedCanvas({
-                width: Math.round(cropper.getCropBoxData().width),
-                height: Math.round(cropper.getCropBoxData().height),
-            });
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            const preview = document.createElement('div');
-            preview.classList.add('preview');
-            preview.innerHTML = `<img src="${dataUrl}" /><button onclick="removeFile(this)">X</button>`;
-            fileList.appendChild(preview);
-            document.getElementById('cropFrame').style.display = 'none';
-            cropper.destroy();
-            cropper = null;
-        });
-
-        function removeFile(button) {
-            const preview = button.parentElement;
-            fileList.removeChild(preview);
-        }
 
         function addFile() {
-            const input = document.getElementById('fileUpload');
-            input.click();
+            const fileList = document.getElementById('fileList');
+            const fileUpload = document.getElementById('fileUpload');
+            const files = fileUpload.files;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const imageUrl = event.target.result;
+                    const preview = createImagePreview(imageUrl);
+                    fileList.appendChild(preview);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function createImagePreview(imageUrl) {
+            const container = document.createElement('div');
+            container.classList.add('preview');
+
+            const img = document.createElement('img');
+            img.src = imageUrl;
+
+            const button = document.createElement('button');
+            button.textContent = 'Remover';
+            button.onclick = function() {
+                container.remove();
+            };
+
+            container.appendChild(img);
+            container.appendChild(button);
+
+            return container;
         }
     </script>
 </body>
