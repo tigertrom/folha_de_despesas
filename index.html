@@ -212,12 +212,11 @@
             form.getTextField('TIPO DE DESPESA').setText(tipoDespesa);
             form.getTextField('MOTIVO DA DESPESA').setText(motivoDespesa);
             form.getTextField('AUTOR DA DESPESA').setText(autorDespesa);
-            form.getTextField('BANCO - CONTA').setText(banco);
+            form.getTextField('BANCO').setText(banco);
             form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
 
-            // Adicionar assinatura sobre o campo "Solicitante"
-            const signatureDataUrl = signaturePad.toDataURL('image/png');
-            const signatureImageBytes = await fetch(signatureDataUrl).then(res => res.arrayBuffer());
+            // Adicionar assinatura
+            const signatureImageBytes = await signaturePad.toDataURL();
             const signatureImage = await pdfDoc.embedPng(signatureImageBytes);
             const firstPage = pdfDoc.getPage(0);
             const signaturePosition = { x: 400, y: 50, width: 150, height: 50 };
@@ -304,6 +303,11 @@
                         preview.remove();
                     });
 
+                    // Adicionar evento para abrir o frame de recorte ao clicar na imagem
+                    img.addEventListener('click', function () {
+                        openCropFrame(img);
+                    });
+
                     preview.appendChild(img);
                     preview.appendChild(button);
                     fileList.appendChild(preview);
@@ -311,6 +315,70 @@
                 reader.readAsDataURL(file);
             }
         }
+
+        let cropper = null;
+        const cropFrame = document.getElementById('cropFrame');
+        const cropImage = document.getElementById('cropImage');
+        const cropButton = document.getElementById('cropButton');
+        const rotateLeftButton = document.getElementById('rotateLeftButton');
+        const rotateRightButton = document.getElementById('rotateRightButton');
+        const applyCropButton = document.getElementById('applyCropButton');
+
+        function openCropFrame(img) {
+            cropImage.src = img.src;
+            cropper = new Cropper(cropImage, {
+                aspectRatio: 1 / 1,
+                viewMode: 1,
+            });
+            cropFrame.style.display = 'flex';
+        }
+
+        cropButton.addEventListener('click', function () {
+            if (cropper) {
+                cropper.crop();
+            }
+        });
+
+        rotateLeftButton.addEventListener('click', function () {
+            if (cropper) {
+                cropper.rotate(-90);
+            }
+        });
+
+        rotateRightButton.addEventListener('click', function () {
+            if (cropper) {
+                cropper.rotate(90);
+            }
+        });
+
+        applyCropButton.addEventListener('click', function () {
+            if (cropper) {
+                const canvas = cropper.getCroppedCanvas({
+                    maxWidth: 250,
+                    maxHeight: 500,
+                });
+                const croppedImageSrc = canvas.toDataURL();
+                const cropPreview = document.createElement('div');
+                cropPreview.classList.add('preview');
+
+                const croppedImg = new Image();
+                croppedImg.src = croppedImageSrc;
+
+                const button = document.createElement('button');
+                button.textContent = 'Remover';
+                button.addEventListener('click', function () {
+                    cropPreview.remove();
+                });
+
+                cropPreview.appendChild(croppedImg);
+                cropPreview.appendChild(button);
+                fileList.appendChild(cropPreview);
+
+                cropFrame.style.display = 'none';
+                cropper.destroy();
+                cropper = null;
+            }
+        });
     </script>
 </body>
 </html>
