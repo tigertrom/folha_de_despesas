@@ -207,13 +207,13 @@
             const classificacao = formData.get('classificacao') || '';
 
             // Preencher o formulário PDF
-            form.getTextField('valor').setText(valor);
-            form.getTextField('dataDespesa').setText(dataDespesa);
-            form.getTextField('tipoDespesa').setText(tipoDespesa);
-            form.getTextField('motivoDespesa').setText(motivoDespesa);
-            form.getTextField('autorDespesa').setText(autorDespesa);
-            form.getTextField('banco').setText(banco);
-            form.getTextField('classificacao').setText(classificacao);
+            form.getTextField('VALOR R$').setText(valor);
+            form.getTextField('DATA DA DESPESA').setText(dataDespesa);
+            form.getTextField('TIPO DE DESPESA').setText(tipoDespesa);
+            form.getTextField('MOTIVO DA DESPESA').setText(motivoDespesa);
+            form.getTextField('AUTOR DA DESPESA').setText(autorDespesa);
+            form.getTextField('BANCO - CONTA').setText(banco);
+            form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
 
             // Adicionar assinatura ao PDF
             const signature = form.getSignature('signature');
