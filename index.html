@@ -110,9 +110,9 @@
             <label for="classificacao">Classificação:</label>
             <input type="text" id="classificacao" name="classificacao" required>
             <div class="file-upload-container">
-                <label for="fileUpload">Adicionar arquivos:</label>
+                <label for="fileUpload">Enviar:</label>
                 <input type="file" id="fileUpload" accept="image/jpeg, image/png, image/bmp" multiple>
-                <button type="button" onclick="addFile()">Adicionar Arquivo</button>
+                <button type="button" onclick="addFile()">Enviar</button>
             </div>
             <div id="fileList" class="file-list"></div>
             <label for="signature">Assinatura:</label>
@@ -120,7 +120,7 @@
             <div id="signature">
                 <canvas></canvas>
             </div>
-            <button type="submit">Submeter</button>
+            <button type="submit">Gerar PDF</button>
         </form>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
