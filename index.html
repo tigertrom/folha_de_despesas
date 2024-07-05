@@ -269,6 +269,9 @@
             link.href = URL.createObjectURL(blob);
             link.download = 'ESPINHO_DE_DESPESAS_PREENCHIDO.pdf';
             link.click();
+
+            // Limpar o formulário após gerar o PDF
+            clearForm();
         });
 
         document.getElementById('fileUpload').addEventListener('change', function (event) {
