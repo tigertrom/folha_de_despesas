@@ -233,11 +233,13 @@
                 const imageUrl = img.src;
                 const imageBytes = await fetch(imageUrl).then(res => res.arrayBuffer());
                 const embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                const imgWidth = embeddedImage.width;
+                const imgHeight = embeddedImage.height;
                 firstPage.drawImage(embeddedImage, {
                     x: 50,
                     y: 400,
-                    width: 200,
-                    height: 200
+                    width: imgWidth,
+                    height: imgHeight
                 });
             }
 
@@ -272,15 +274,7 @@
         });
 
         document.getElementById('cropButton').addEventListener('click', () => {
-            const canvas = cropper.getCroppedCanvas();
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            const preview = document.createElement('div');
-            preview.classList.add('preview');
-            preview.innerHTML = `<img src="${dataUrl}" /><button onclick="removeFile(this)">X</button>`;
-            fileList.appendChild(preview);
-            document.getElementById('cropFrame').style.display = 'none';
-            cropper.destroy();
-            cropper = null;
+            cropper.crop();
         });
 
         document.getElementById('rotateLeftButton').addEventListener('click', () => {
@@ -292,7 +286,10 @@
         });
 
         document.getElementById('applyCropButton').addEventListener('click', () => {
-            const canvas = cropper.getCroppedCanvas();
+            const canvas = cropper.getCroppedCanvas({
+                width: Math.round(cropper.getCropBoxData().width),
+                height: Math.round(cropper.getCropBoxData().height),
+            });
             const dataUrl = canvas.toDataURL('image/jpeg');
             const preview = document.createElement('div');
             preview.classList.add('preview');
