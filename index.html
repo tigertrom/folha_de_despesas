@@ -273,7 +273,7 @@
 
         document.getElementById('cropButton').addEventListener('click', () => {
             const canvas = cropper.getCroppedCanvas();
-            const dataUrl = canvas.toDataURL();
+            const dataUrl = canvas.toDataURL('image/jpeg');
             const preview = document.createElement('div');
             preview.classList.add('preview');
             preview.innerHTML = `<img src="${dataUrl}" /><button onclick="removeFile(this)">X</button>`;
@@ -293,7 +293,7 @@
 
         document.getElementById('applyCropButton').addEventListener('click', () => {
             const canvas = cropper.getCroppedCanvas();
-            const dataUrl = canvas.toDataURL();
+            const dataUrl = canvas.toDataURL('image/jpeg');
             const preview = document.createElement('div');
             preview.classList.add('preview');
             preview.innerHTML = `<img src="${dataUrl}" /><button onclick="removeFile(this)">X</button>`;
