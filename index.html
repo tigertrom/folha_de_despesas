@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espelho de Despesas</title>
     <link rel="icon" href="img/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" />
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -118,6 +117,7 @@
             margin: 0 5px;
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css"/>
 </head>
 <body>
     <div class="container">
@@ -139,7 +139,7 @@
             <label for="classificacao">Classificação:</label>
             <input type="text" id="classificacao" name="classificacao">
             <div class="file-upload-container">
-                <label for="fileUpload">Escolha o arquivo:</label>
+                <label for="fileUpload">Adicionar arquivos:</label>
                 <input type="file" id="fileUpload" accept="image/jpeg, image/png, image/bmp" multiple>
             </div>
             <div id="fileList" class="file-list"></div>
@@ -148,6 +148,7 @@
             <div id="signature">
                 <canvas></canvas>
             </div>
+            <button type="submit">Gerar PDF</button>
         </form>
     </div>
     <div id="cropFrame">
@@ -167,6 +168,7 @@
     <script>
         const canvas = document.querySelector('#signature canvas');
         const signaturePad = new SignaturePad(canvas);
+        let cropper;
 
         function clearForm() {
             document.getElementById('expenseForm').reset();
@@ -186,13 +188,12 @@
             event.preventDefault();
 
             // Carregar o PDF
-            const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf';
+            const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
             const pdfBytes = await fetch(pdfPath).then(res => {
                 if (!res.ok) throw new Error('Erro ao carregar o PDF');
                 return res.arrayBuffer();
             });
             const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
-            const firstPage = pdfDoc.getPage(0);
             const form = pdfDoc.getForm();
 
             // Obter dados do formulário
@@ -202,10 +203,10 @@
             const tipoDespesa = formData.get('tipoDespesa');
             const motivoDespesa = formData.get('motivoDespesa');
             const autorDespesa = formData.get('autorDespesa');
-            const banco = formData.get('banco') || '';
-            const classificacao = formData.get('classificacao') || '';
+            const banco = formData.get('banco');
+            const classificacao = formData.get('classificacao');
 
-            // Preencher o formulário PDF
+            // Preencher campos do formulário no PDF
             form.getTextField('VALOR R$').setText(valor);
             form.getTextField('DATA DA DESPESA').setText(dataDespesa);
             form.getTextField('TIPO DE DESPESA').setText(tipoDespesa);
@@ -214,17 +215,19 @@
             form.getTextField('BANCO - CONTA').setText(banco);
             form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
 
-            // Adicionar assinatura ao PDF
-            const signature = form.getSignature('Solicitante');
-            const signatureImageBytes = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(signaturePad.toDataURL());
+            // Adicionar assinatura sobre o campo "Solicitante"
+            const signatureDataUrl = signaturePad.toDataURL('image/png');
+            const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
+            const pages = pdfDoc.getPages();
+            const firstPage = pages[0];
+            firstPage.drawImage(signatureImage, {
+                x: 400,  // Ajuste conforme necessário
+                y: 30,  // Ajuste conforme necessário
+                width: 150,
+                height: 50,
             });
-            signature.setImageFromBase64(signatureImageBytes);
 
-            // Adicionar imagens ao PDF
+            // Adicionar imagens da div em uma nova página
             const images = Array.from(fileList.querySelectorAll('.preview img'));
             if (images.length > 0) {
                 const imageFieldPositions = {
@@ -250,102 +253,82 @@
                     const scaledWidth = dimensions.width * scale;
                     const scaledHeight = dimensions.height * scale;
 
-                    const position = imageFieldPositions[`NOTA ${i + 1}`];
                     firstPage.drawImage(image, {
-                        x: position.x,
-                        y: position.y,
+                        x: imageFieldPositions[`NOTA ${i + 1}`].x,
+                        y: imageFieldPositions[`NOTA ${i + 1}`].y,
                         width: scaledWidth,
                         height: scaledHeight,
                     });
                 }
             }
 
-            // Salvar o PDF modificado
-            const pdfBytesFinal = await pdfDoc.save();
-
-            // Download do PDF
-            const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
+            // Salvar PDF atualizado
+            const pdfBytesUpdated = await pdfDoc.save();
+            const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'espelho_despesas.pdf';
+            link.download = 'ESPINHO_DE_DESPESAS_PREENCHIDO.pdf';
             link.click();
         });
 
-        let currentImage = null;
-        let cropper = null;
+        document.getElementById('fileUpload').addEventListener('change', function (event) {
+            const files = event.target.files;
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '100%';
+                    addPreview(img); // Adiciona a pré-visualização diretamente
 
-        function openCropFrame(img) {
-            currentImage = img;
-            const cropImage = document.getElementById('cropImage');
-            cropImage.src = img.src;
-
-            document.getElementById('cropFrame').style.display = 'flex';
-
-            if (cropper) {
-                cropper.replace(img.src);
-            } else {
-                cropper = new Cropper(cropImage, {
-                    aspectRatio: NaN, // Configurar a proporção desejada (NaN para livre)
-                    viewMode: 1,
-                    autoCrop: true,
-                    movable: true,
-                    zoomable: true,
-                    rotatable: true,
-                    guides: true,
-                    background: false,
-                    crop(event) {
-                        // Callback de recorte
-                    },
-                });
+                    // Abre o quadro de edição imediatamente após carregar a imagem
+                    openCropFrame(img);
+                };
+                reader.readAsDataURL(file);
             }
-        }
-
-        document.getElementById('cropButton').addEventListener('click', function() {
-            cropper.crop();
-        });
-
-        document.getElementById('rotateLeftButton').addEventListener('click', function() {
-            cropper.rotate(-90);
-        });
-
-        document.getElementById('rotateRightButton').addEventListener('click', function() {
-            cropper.rotate(90);
-        });
-
-        document.getElementById('applyCropButton').addEventListener('click', async function() {
-            const canvas = cropper.getCroppedCanvas();
-            const croppedImage = canvas.toDataURL(); // Imagem recortada como base64
-
-            // Substituir a imagem original pela recortada na lista de arquivos
-            currentImage.src = croppedImage;
-
-            // Fechar o frame de recorte
-            document.getElementById('cropFrame').style.display = 'none';
         });
 
         function addFile() {
-            const input = document.getElementById('fileUpload');
+            document.getElementById('fileUpload').click();
+        }
 
-            Array.from(input.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.classList.add('preview');
-                    
-                    // Abrir o frame de recorte ao carregar a imagem
-                    openCropFrame(img);
+        function openCropFrame(image) {
+            document.getElementById('cropFrame').style.display = 'flex';
+            const cropImage = document.getElementById('cropImage');
+            cropImage.src = image.src;
 
-                    img.addEventListener('click', function () {
-                        openCropFrame(img); // Abrir o frame de recorte ao clicar na imagem
-                    });
-
-                    fileList.appendChild(img); // Adicionar a imagem à lista
-                };
-                reader.readAsDataURL(file);
+            cropper = new Cropper(cropImage, {
+                aspectRatio: NaN,
+                viewMode: 1,
+                autoCropArea: 1,
+                responsive: true,
+                background: false,
+                rotatable: true,
+                scalable: true,
             });
 
-            input.value = ''; // Limpar o input de arquivos após o envio
+            document.getElementById('cropButton').onclick = () => cropper.crop();
+            document.getElementById('rotateLeftButton').onclick = () => cropper.rotate(-90);
+            document.getElementById('rotateRightButton').onclick = () => cropper.rotate(90);
+            document.getElementById('applyCropButton').onclick = () => {
+                const canvas = cropper.getCroppedCanvas();
+                image.src = canvas.toDataURL();
+                cropper.destroy();
+                document.getElementById('cropFrame').style.display = 'none';
+                addPreview(image);
+            };
+        }
+
+        function addPreview(image) {
+            const div = document.createElement('div');
+            div.classList.add('preview');
+            const button = document.createElement('button');
+            button.textContent = 'X';
+            button.onclick = () => div.remove();
+            div.appendChild(image);
+            div.appendChild(button);
+            fileList.appendChild(div);
         }
     </script>
 </body>
