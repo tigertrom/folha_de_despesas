@@ -34,9 +34,6 @@
         #fileList {
             text-align: left;
             margin-bottom: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
         }
         .preview {
             display: inline-block;
@@ -46,7 +43,6 @@
             object-fit: cover;
             margin: 5px;
             overflow: hidden;
-            cursor: pointer;
         }
         .preview img {
             width: 100%;
@@ -198,7 +194,7 @@
                 return res.arrayBuffer();
             });
             const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
-            const firstPage = pdfDoc.getPages()[0];
+            const firstPage = pdfDoc.getPage(0);
             const form = pdfDoc.getForm();
 
             // Obter dados do formulário
@@ -331,7 +327,6 @@
 
         function addFile() {
             const input = document.getElementById('fileUpload');
-            const fileList = document.getElementById('fileList');
 
             Array.from(input.files).forEach(file => {
                 const reader = new FileReader();
@@ -343,12 +338,7 @@
                         openCropFrame(img); // Abrir o frame de recorte ao clicar na imagem
                     });
 
-                    fileList.appendChild(img);
-
-                    // Permitir reedição da imagem ao clicar nela na lista
-                    img.addEventListener('click', function() {
-                        openCropFrame(img);
-                    });
+                    fileList.appendChild(img); // Adicionar a imagem à lista
                 };
                 reader.readAsDataURL(file);
             });
