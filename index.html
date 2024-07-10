@@ -227,7 +227,7 @@
                 height: 50,
             });
 
-// Definição de imageFieldPositions
+            // Definição de imageFieldPositions
 const imageFieldPositions = {
     "NOTA 1": { x: 70, y: 120 },
     "NOTA 2": { x: 320, y: 120 }
@@ -250,21 +250,11 @@ if (images.length === 1) {
     }
 
     const dimensions = image.scale(1);
-
-    // Calculando o espaço disponível entre NOTA 1 e NOTA 2
     const totalWidth = imageFieldPositions["NOTA 2"].x + maxImageWidth - imageFieldPositions["NOTA 1"].x;
-    const totalHeight = maxImageHeight;
-
-    // Calculando o fator de escala para ajustar a imagem dentro do espaço disponível
-    const scaleWidth = totalWidth / dimensions.width;
-    const scaleHeight = totalHeight / dimensions.height;
-    const scale = Math.min(scaleWidth, scaleHeight);
-
-    // Aplicando as dimensões escaladas
+    const scale = totalWidth / dimensions.width;
     const scaledWidth = dimensions.width * scale;
     const scaledHeight = dimensions.height * scale;
 
-    // Posicionando a imagem
     firstPage.drawImage(image, {
         x: imageFieldPositions["NOTA 1"].x,
         y: imageFieldPositions["NOTA 1"].y,
@@ -297,23 +287,15 @@ if (images.length === 1) {
     }
 }
 
-// Exemplo simplificado, ajuste conforme seu código
-const formData = new FormData(event.target); // Declare apenas uma vez, se possível
 
-// Outras partes do seu código que usam formData
-const autorDespesa = formData.get('autorDespesa');
-const dataDespesa = formData.get('dataDespesa');
+            // Salvar PDF atualizado
+            const pdfBytesUpdated = await pdfDoc.save();
+            const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'ESPINHO_DE_DESPESAS_PREENCHIDO.pdf';
+            link.click();
 
-// Construir o nome do arquivo
-const fileName = `ESPELHO_DE_DESPESAS_${autorDespesa}-${dataDespesa}.pdf`;
-
-// Salvar PDF atualizado com o nome personalizado
-const pdfBytesUpdated = await pdfDoc.save();
-const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
-const link = document.createElement('a');
-link.href = URL.createObjectURL(blob);
-link.download = fileName;
-link.click();
             // Limpar o formulário após gerar o PDF
             clearForm();
         });
