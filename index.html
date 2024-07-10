@@ -223,12 +223,13 @@
             firstPage.drawImage(signatureImage, {
                 x: 400,  // Ajuste conforme necessário
                 y: 30,  // Ajuste conforme necessário
-                width: 100,  // Ajuste conforme necessário
-                height: 40  // Ajuste conforme necessário
+                width: 150,
+                height: 50,
             });
 
-            // Adicionar imagens conforme necessário
-            const images = fileList.querySelectorAll('.preview img');
+            // Obter arquivos carregados
+            const images = Array.from(fileList.querySelectorAll('.preview img'));
+
             if (images.length > 0) {
                 const imageFieldPositions = {
                     "NOTA 1": { x: 70, y: 120 },
@@ -236,185 +237,86 @@
                 };
                 const maxImageWidth = 250;
                 const maxImageHeight = 500;
-
                 for (let i = 0; i < images.length; i++) {
                     const img = images[i];
+                    const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
                     const imgType = img.src.split(';')[0].split(':')[1]; // Obtém o tipo de imagem (ex: "image/jpeg")
+                    const embeddedImage = await pdfDoc.embedJpg(imageBytes, { type: imgType });
 
-                    // Verifica se a imagem já está em formato JPG
-                    if (!imgType || imgType.toLowerCase().indexOf('jpeg') === -1) {
-                        // Se não estiver em JPG, converte para JPG
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
-                        const dataUrl = canvas.toDataURL('image/jpeg');
-                        const blob = await fetch(dataUrl).then(res => res.blob());
-                        const imageBytes = await new Response(blob).arrayBuffer();
-                        img.src = dataUrl; // Atualiza a imagem no DOM para a versão JPG
+                    const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
+                    const { x, y } = imageFieldPositions[fieldName];
+                    const { width, height } = resizeImage(embeddedImage.width, embeddedImage.height, maxImageWidth, maxImageHeight);
 
-                        // Incorpora a imagem convertida para JPG no PDF
-                        const embeddedImage = await pdfDoc.embedJpg(imageBytes);
-                        const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
-                        const { x, y } = imageFieldPositions[fieldName];
-                        const { width, height } = resizeImage(embeddedImage.width, embeddedImage.height, maxImageWidth, maxImageHeight);
-
-                        firstPage.drawImage(embeddedImage, {
-                            x: x,
-                            y: y,
-                            width: width,
-                            height: height
-                        });
-                    } else {
-                        // Já está em JPG, incorpora diretamente no PDF
-                        const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-                        const embeddedImage = await pdfDoc.embedJpg(imageBytes);
-
-                        const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
-                        const { x, y } = imageFieldPositions[fieldName];
-                        const { width, height } = resizeImage(embeddedImage.width, embeddedImage.height, maxImageWidth, maxImageHeight);
-
-                        firstPage.drawImage(embeddedImage, {
-                            x: x,
-                            y: y,
-                            width: width,
-                            height: height
-                        });
-                    }
+                    firstPage.drawImage(embeddedImage, {
+                        x: x,
+                        y: y,
+                        width: width,
+                        height: height
+                    });
                 }
             }
 
-            // Salvar PDF com as modificações
-            const pdfBytesUpdated = await pdfDoc.save();
-            const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
+            // Gerar o arquivo PDF final
+            const pdfBytesFinal = await pdfDoc.save();
+            const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
             const blobUrl = URL.createObjectURL(blob);
 
-            // Abrir PDF em uma nova aba
-            window.open(blobUrl);
+            // Abrir o PDF gerado em uma nova aba
+            window.open(blobUrl, '_blank');
         });
-
-        function resizeImage(width, height, maxWidth, maxHeight) {
-            let newWidth = width;
-            let newHeight = height;
-
-            if (width > maxWidth) {
-                const ratio = maxWidth / width;
-                newWidth = maxWidth;
-                newHeight = height * ratio;
-            }
-
-            if (newHeight > maxHeight) {
-                const ratio = maxHeight / newHeight;
-                newHeight = maxHeight;
-                newWidth = newWidth * ratio;
-            }
-
-            return { width: newWidth, height: newHeight };
-        }
 
         document.getElementById('fileUpload').addEventListener('change', function (event) {
-            const fileInput = event.target;
-            const files = fileInput.files;
+            const files = event.target.files;
+            const fileList = document.getElementById('fileList');
 
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const reader = new FileReader();
+            if (files && files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
 
-                reader.onload = function (event) {
-                    const imageUrl = event.target.result;
-                    const preview = createImagePreview(imageUrl);
-                    fileList.appendChild(preview);
-                };
+                    reader.onload = function (e) {
+                        const imgSrc = e.target.result;
+                        const previewContainer = document.createElement('div');
+                        previewContainer.classList.add('preview');
+                        const imgElement = document.createElement('img');
+                        imgElement.src = imgSrc;
+                        previewContainer.appendChild(imgElement);
 
-                reader.readAsDataURL(file);
-            }
-        });
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Remover';
+                        deleteButton.addEventListener('click', function () {
+                            previewContainer.remove();
+                        });
+                        previewContainer.appendChild(deleteButton);
 
-        function createImagePreview(imageUrl) {
-            const previewContainer = document.createElement('div');
-            previewContainer.classList.add('preview');
+                        fileList.appendChild(previewContainer);
+                    };
 
-            const image = document.createElement('img');
-            image.src = imageUrl;
-            image.onload = function () {
-                // Inicializa o cropper após o carregamento da imagem
-                cropper = new Cropper(image, {
-                    aspectRatio: NaN, // Permite recorte livre
-                    viewMode: 1, // Visualização de recorte
-                    dragMode: 'move',
-                    autoCropArea: 1,
-                    checkOrientation: false,
-                    responsive: true,
-                    crop(event) {
-                        // Atualiza a área de recorte
-                        const cropData = cropper.getData();
-                        const canvas = cropper.getCroppedCanvas();
-                        document.getElementById('cropImage').src = canvas.toDataURL();
-                    }
-                });
-            };
-
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Excluir';
-            deleteButton.addEventListener('click', function () {
-                previewContainer.remove();
-            });
-
-            previewContainer.appendChild(image);
-            previewContainer.appendChild(deleteButton);
-
-            return previewContainer;
-        }
-
-        document.getElementById('cropButton').addEventListener('click', function () {
-            if (cropper) {
-                cropper.destroy();
-            }
-
-            const images = fileList.querySelectorAll('.preview img');
-            const selectedImage = images[images.length - 1];
-            document.getElementById('cropImage').src = selectedImage.src;
-
-            document.getElementById('cropFrame').style.display = 'flex';
-            cropper = new Cropper(document.getElementById('cropImage'), {
-                aspectRatio: NaN, // Permite recorte livre
-                viewMode: 1, // Visualização de recorte
-                dragMode: 'move',
-                autoCropArea: 1,
-                checkOrientation: false,
-                responsive: true,
-                crop(event) {
-                    // Atualiza a área de recorte
-                    const cropData = cropper.getData();
-                    const canvas = cropper.getCroppedCanvas();
-                    document.getElementById('cropImage').src = canvas.toDataURL();
+                    reader.readAsDataURL(file);
                 }
-            });
+            }
         });
 
-        document.getElementById('rotateLeftButton').addEventListener('click', function () {
-            cropper.rotate(-90);
-        });
+        // Função para redimensionar imagem mantendo proporções
+        function resizeImage(origWidth, origHeight, maxWidth, maxHeight) {
+            let width = origWidth;
+            let height = origHeight;
 
-        document.getElementById('rotateRightButton').addEventListener('click', function () {
-            cropper.rotate(90);
-        });
+            // Redimensionar proporcionalmente
+            if (width > maxWidth) {
+                const ratio = maxWidth / width;
+                width = maxWidth;
+                height *= ratio;
+            }
+            if (height > maxHeight) {
+                const ratio = maxHeight / height;
+                height = maxHeight;
+                width *= ratio;
+            }
 
-        document.getElementById('applyCropButton').addEventListener('click', function () {
-            const canvas = cropper.getCroppedCanvas();
-            const croppedImage = document.createElement('img');
-            croppedImage.src = canvas.toDataURL();
-
-            // Substitui a imagem original na lista de previews
-            const images = fileList.querySelectorAll('.preview img');
-            const selectedImage = images[images.length - 1];
-            selectedImage.src = croppedImage.src;
-
-            // Fecha o quadro de recorte
-            document.getElementById('cropFrame').style.display = 'none';
-        });
-
+            return { width, height };
+        }
     </script>
+    <script src="script.js"></script>
 </body>
 </html>
