@@ -228,95 +228,141 @@
             });
 
             // Obter arquivos carregados
+            const files = fileList.querySelectorAll('.preview img');
             const images = Array.from(fileList.querySelectorAll('.preview img'));
+            
+            if (files.length === 1) {
+                // Redimensionar imagem única para 500x500px
+                const img = files[0];
+                const imgWidth = 500;
+                const imgHeight = 500;
+                const xPos = (firstPage.getWidth() - imgWidth) / 2;
+                const yPos = (firstPage.getHeight() - imgHeight) / 2;
+                const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
+                const embeddedImage = await pdfDoc.embedJpg(imageBytes);
 
-            if (images.length > 0) {
-                const imageFieldPositions = {
-                    "NOTA 1": { x: 70, y: 120 },
-                    "NOTA 2": { x: 320, y: 120 }
-                };
-                const maxImageWidth = 250;
-                const maxImageHeight = 500;
-                for (let i = 0; i < images.length; i++) {
-                    const img = images[i];
-                    const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-                    const imgType = img.src.split(';')[0].split(':')[1]; // Obtém o tipo de imagem (ex: "image/jpeg")
-                    const embeddedImage = await pdfDoc.embedJpg(imageBytes, { type: imgType });
-
-                    const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
-                    const { x, y } = imageFieldPositions[fieldName];
-                    const { width, height } = resizeImage(embeddedImage.width, embeddedImage.height, maxImageWidth, maxImageHeight);
-
-                    firstPage.drawImage(embeddedImage, {
-                        x: x,
-                        y: y,
-                        width: width,
-                        height: height
-                    });
-                }
-            }
-
-            // Gerar o arquivo PDF final
-            const pdfBytesFinal = await pdfDoc.save();
-            const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(blob);
-
-            // Abrir o PDF gerado em uma nova aba
-            window.open(blobUrl, '_blank');
-        });
-
-        document.getElementById('fileUpload').addEventListener('change', function (event) {
-            const files = event.target.files;
-            const fileList = document.getElementById('fileList');
-
-            if (files && files.length > 0) {
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    const reader = new FileReader();
-
-                    reader.onload = function (e) {
-                        const imgSrc = e.target.result;
-                        const previewContainer = document.createElement('div');
-                        previewContainer.classList.add('preview');
-                        const imgElement = document.createElement('img');
-                        imgElement.src = imgSrc;
-                        previewContainer.appendChild(imgElement);
-
-                        const deleteButton = document.createElement('button');
-                        deleteButton.textContent = 'Remover';
-                        deleteButton.addEventListener('click', function () {
-                            previewContainer.remove();
-                        });
-                        previewContainer.appendChild(deleteButton);
-
-                        fileList.appendChild(previewContainer);
+                firstPage.drawImage(embeddedImage, {
+                    x: xPos,
+                    y: 120,
+                    width: imgWidth,
+                    height: imgHeight
+                });
+            } else {
+                // Adicionar outras imagens conforme necessário
+                if (images.length > 0) {
+                    const imageFieldPositions = {
+                        "NOTA 1": { x: 70, y: 120 },
+                        "NOTA 2": { x: 320, y: 120 }
                     };
+                    const maxImageWidth = 250;
+                    const maxImageHeight = 500;
+                    for (let i = 0; i < images.length; i++) {
+                        const img = images[i];
+                        const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
+                        const imgType = img.src.split(';')[0].split(':')[1]; // Obtém o tipo de imagem (ex: "image/jpeg")
+                        const embeddedImage = await pdfDoc.embedJpg(imageBytes, { type: imgType });
 
-                    reader.readAsDataURL(file);
+                        const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
+                        const { x, y } = imageFieldPositions[fieldName];
+                        const { width, height } = resizeImage(embeddedImage.width, embeddedImage.height, maxImageWidth, maxImageHeight);
+
+                        firstPage.drawImage(embeddedImage, {
+                            x: x,
+                            y: y,
+                            width: width,
+                            height: height
+                        });
+                    }
                 }
+            }
+
+            function resizeImage(imgWidth, imgHeight, maxWidth, maxHeight) {
+                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                return {
+                    width: imgWidth * ratio,
+                    height: imgHeight * ratio
+                };
+            }
+
+            // Salvar o PDF
+            const pdfBytesNew = await pdfDoc.save();
+            const blob = new Blob([pdfBytesNew], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Espelho_de_Despesas.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+            clearForm();
+        });
+
+        const fileUpload = document.getElementById('fileUpload');
+        const cropFrame = document.getElementById('cropFrame');
+        const cropImage = document.getElementById('cropImage');
+        const cropButton = document.getElementById('cropButton');
+        const rotateLeftButton = document.getElementById('rotateLeftButton');
+        const rotateRightButton = document.getElementById('rotateRightButton');
+        const applyCropButton = document.getElementById('applyCropButton');
+        let currentImage = null;
+
+        fileUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    cropImage.src = reader.result;
+                    cropFrame.style.display = 'flex';
+                    cropper = new Cropper(cropImage, {
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        aspectRatio: NaN,
+                        movable: true,
+                        scalable: true,
+                        rotatable: true,
+                    });
+                };
+                reader.readAsDataURL(file);
+                currentImage = file;
             }
         });
 
-        // Função para redimensionar imagem mantendo proporções
-        function resizeImage(origWidth, origHeight, maxWidth, maxHeight) {
-            let width = origWidth;
-            let height = origHeight;
+        cropButton.addEventListener('click', () => {
+            const canvas = cropper.getCroppedCanvas();
+            const croppedDataUrl = canvas.toDataURL('image/png');
+            cropImage.src = croppedDataUrl;
+        });
 
-            // Redimensionar proporcionalmente
-            if (width > maxWidth) {
-                const ratio = maxWidth / width;
-                width = maxWidth;
-                height *= ratio;
-            }
-            if (height > maxHeight) {
-                const ratio = maxHeight / height;
-                height = maxHeight;
-                width *= ratio;
-            }
+        rotateLeftButton.addEventListener('click', () => {
+            cropper.rotate(-90);
+        });
 
-            return { width, height };
+        rotateRightButton.addEventListener('click', () => {
+            cropper.rotate(90);
+        });
+
+        applyCropButton.addEventListener('click', () => {
+            const canvas = cropper.getCroppedCanvas();
+            const croppedDataUrl = canvas.toDataURL('image/png');
+            addPreviewImage(croppedDataUrl);
+            cropFrame.style.display = 'none';
+            cropper.destroy();
+            cropImage.src = '';
+        });
+
+        function addPreviewImage(src) {
+            const previewContainer = document.createElement('div');
+            previewContainer.className = 'preview';
+            const imgElement = document.createElement('img');
+            imgElement.src = src;
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'X';
+            deleteButton.addEventListener('click', () => {
+                previewContainer.remove();
+            });
+            previewContainer.appendChild(imgElement);
+            previewContainer.appendChild(deleteButton);
+            fileList.appendChild(previewContainer);
         }
     </script>
-    <script src="script.js"></script>
 </body>
 </html>
