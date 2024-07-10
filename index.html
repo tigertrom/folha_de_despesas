@@ -229,6 +229,9 @@
 
 // Adicionar imagens da div em uma nova página
 const images = Array.from(fileList.querySelectorAll('.preview img'));
+const maxImageWidth = 250;
+const maxImageHeight = 500;
+
 if (images.length === 1) {
     const img = images[0];
     const src = img.src;
@@ -253,9 +256,6 @@ if (images.length === 1) {
         height: scaledHeight,
     });
 } else if (images.length > 1) {
-    const maxImageWidth = 250;
-    const maxImageHeight = 500;
-
     for (let i = 0; i < images.length; i++) {
         const img = images[i];
         const src = img.src;
