@@ -143,7 +143,7 @@
                 <input type="file" id="fileUpload" accept="">
             </div>
             <div id="fileList" class="file-list"></div>
-            <label for="signature">Assinatura:</label>
+            <label for="signature">Solicitante:</label>
             <button type="button" onclick="clearSignature()">Limpar Assinatura</button>
             <div id="signature">
                 <canvas></canvas>
@@ -218,7 +218,7 @@
             // Adicionar assinatura sobre o campo "Solicitante"
             const signatureDataUrl = signaturePad.toDataURL();
             const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-            const signatureField = form.getTextField('Assinatura');
+            const signatureField = form.getTextField('Solicitante');
             const signatureDims = signatureField.getDimensions();
             const signaturePage = signatureField.getAcroField().getParent();
             signaturePage.drawImage(signatureImage, {
