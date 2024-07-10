@@ -221,118 +221,125 @@
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
             firstPage.drawImage(signatureImage, {
-                x: 400,  // Ajuste conforme necessário
-                y: 30,  // Ajuste conforme necessário
-                width: 150,
-                height: 50,
+                x: 400,  // Ajustar conforme necessário
+                y: 180,  // Ajustar conforme necessário
+                width: 150,  // Ajustar conforme necessário
+                height: 50  // Ajustar conforme necessário
             });
 
-            // Obter arquivos carregados
-            const files = fileList.querySelectorAll('.preview img');
-            const images = Array.from(fileList.querySelectorAll('.preview img'));
-            
-            if (files.length === 1) {
-                // Redimensionar imagem única para 500x500px
-                const img = files[0];
-                const imgWidth = 500;
-                const imgHeight = 500;
-                const xPos = (firstPage.getWidth() - imgWidth) / 2;
-                const yPos = (firstPage.getHeight() - imgHeight) / 2;
-                const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-                const embeddedImage = await pdfDoc.embedJpg(imageBytes);
-
-                firstPage.drawImage(embeddedImage, {
-                    x: xPos,
-                    y: 120,
-                    width: imgWidth,
-                    height: imgHeight
-                });
-            } else {
-                // Adicionar outras imagens conforme necessário
-                if (images.length > 0) {
-                    const imageFieldPositions = {
-                        "NOTA 1": { x: 70, y: 120 },
-                        "NOTA 2": { x: 320, y: 120 }
-                    };
-                    const maxImageWidth = 250;
-                    const maxImageHeight = 500;
-                    for (let i = 0; i < images.length; i++) {
-                        const img = images[i];
-                        const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-                        const embeddedImage = await pdfDoc.embedPng(imageBytes);
-
-                        const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
-                        const { x, y } = imageFieldPositions[fieldName];
-                        const { width, height } = resizeImage(embeddedImage.width, embeddedImage.height, maxImageWidth, maxImageHeight);
-
-                        firstPage.drawImage(embeddedImage, {
-                            x: x,
-                            y: y,
-                            width: width,
-                            height: height
-                        });
-                    }
+            // Adicionar imagens ao PDF
+            const fileInputs = fileList.getElementsByTagName('img');
+            for (let i = 0; i < fileInputs.length; i++) {
+                const file = fileInputs[i];
+                const imgDataUrl = file.src;
+                const img = await pdfDoc.embedPng(imgDataUrl);
+                if (i === 0) {
+                    firstPage.drawImage(img, {
+                        x: 50,
+                        y: 200,
+                        width: 200,
+                        height: 200
+                    });
+                } else if (i === 1) {
+                    firstPage.drawImage(img, {
+                        x: 300,
+                        y: 200,
+                        width: 200,
+                        height: 200
+                    });
                 }
             }
 
-            function resizeImage(imgWidth, imgHeight, maxWidth, maxHeight) {
-                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
-                return {
-                    width: imgWidth * ratio,
-                    height: imgHeight * ratio
-                };
-            }
-
-            const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+            // Salvar o PDF editado
+            const pdfBytesEdited = await pdfDoc.save();
+            const blob = new Blob([pdfBytesEdited], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = pdfDataUri;
-            link.download = 'Espelho_de_Despesas.pdf';
+            link.href = url;
+            link.download = 'espelho_de_despesas.pdf';
             link.click();
+
+            clearForm();
         });
 
-        document.getElementById('fileUpload').addEventListener('change', (event) => {
-            const files = event.target.files;
+        const fileUpload = document.getElementById('fileUpload');
+        const cropFrame = document.getElementById('cropFrame');
+        const cropImage = document.getElementById('cropImage');
+        const cropButton = document.getElementById('cropButton');
+        const rotateLeftButton = document.getElementById('rotateLeftButton');
+        const rotateRightButton = document.getElementById('rotateRightButton');
+        const applyCropButton = document.getElementById('applyCropButton');
 
-            for (const file of files) {
+        fileUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.classList.add('preview');
-                    img.addEventListener('click', () => openCropper(img));
-
-                    const div = document.createElement('div');
-                    div.classList.add('preview');
-                    div.appendChild(img);
-
-                    const deleteButton = document.createElement('button');
-                    deleteButton.innerText = 'X';
-                    deleteButton.addEventListener('click', () => div.remove());
-                    div.appendChild(deleteButton);
-
-                    fileList.appendChild(div);
+                    cropImage.src = e.target.result;
+                    cropFrame.style.display = 'flex';
+                    cropper = new Cropper(cropImage, {
+                        aspectRatio: NaN,
+                    });
                 };
                 reader.readAsDataURL(file);
             }
         });
 
-        function openCropper(image) {
-            const cropFrame = document.getElementById('cropFrame');
-            const cropImage = document.getElementById('cropImage');
-            cropImage.src = image.src;
-            cropFrame.style.display = 'flex';
+        cropButton.addEventListener('click', () => {
+            const croppedCanvas = cropper.getCroppedCanvas();
+            const croppedImage = new Image();
+            croppedImage.src = croppedCanvas.toDataURL();
+            addImageToList(croppedImage.src);
+            cropper.destroy();
+            cropFrame.style.display = 'none';
+            fileUpload.value = '';
+        });
 
-            cropper = new Cropper(cropImage, {
-                aspectRatio: NaN,
-                viewMode: 1,
+        rotateLeftButton.addEventListener('click', () => {
+            cropper.rotate(-90);
+        });
+
+        rotateRightButton.addEventListener('click', () => {
+            cropper.rotate(90);
+        });
+
+        applyCropButton.addEventListener('click', () => {
+            const croppedCanvas = cropper.getCroppedCanvas();
+            const croppedImage = new Image();
+            croppedImage.src = croppedCanvas.toDataURL();
+            addImageToList(croppedImage.src);
+            cropper.destroy();
+            cropFrame.style.display = 'none';
+            fileUpload.value = '';
+        });
+
+        function addImageToList(src) {
+            const img = document.createElement('img');
+            img.src = src;
+            const preview = document.createElement('div');
+            preview.className = 'preview';
+            preview.appendChild(img);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'x';
+            deleteButton.addEventListener('click', () => {
+                preview.remove();
             });
+            preview.appendChild(deleteButton);
 
-            document.getElementById('applyCropButton').onclick = () => {
-                const canvas = cropper.getCroppedCanvas();
-                image.src = canvas.toDataURL();
-                cropper.destroy();
-                cropFrame.style.display = 'none';
-            };
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Editar';
+            editButton.addEventListener('click', () => {
+                cropImage.src = src;
+                cropFrame.style.display = 'flex';
+                cropper = new Cropper(cropImage, {
+                    aspectRatio: NaN,
+                });
+                preview.remove();
+            });
+            preview.appendChild(editButton);
+
+            fileList.appendChild(preview);
         }
     </script>
 </body>
