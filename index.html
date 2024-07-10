@@ -221,17 +221,17 @@
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
             firstPage.drawImage(signatureImage, {
-                x: 50,  // Ajuste conforme necessário
-                y: 150,  // Ajuste conforme necessário
-                width: signatureImage.width * 0.15,  // Ajuste conforme necessário
-                height: signatureImage.height * 0.15  // Ajuste conforme necessário
+                x: 400,  // Ajuste conforme necessário
+                y: 30,  // Ajuste conforme necessário
+                width: 150,
+                height: 50,
             });
 
             // Adicionar imagens ao PDF
             const images = fileList.querySelectorAll('.preview img');
             const imageFieldPositions = {
-                'NOTA 1': { x: 50, y: 50 },
-                'NOTA 2': { x: 250, y: 50 }
+                'NOTA 1': { x: 70, y: 120 },
+                'NOTA 2': { x: 320, y: 120 }
             };
             const maxImageWidth = 200;  // Ajuste conforme necessário
             const maxImageHeight = 150;  // Ajuste conforme necessário
@@ -242,12 +242,23 @@
 
                 const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
                 const { x, y } = imageFieldPositions[fieldName];
-                const { width, height } = resizeImage(img.width, img.height, maxImageWidth, maxImageHeight);
+                let width = img.width;
+                let height = img.height;
+
+                // Redimensionar imagem se exceder os limites máximos
+                if (width > maxImageWidth || height > maxImageHeight) {
+                    const ratio = Math.min(maxImageWidth / width, maxImageHeight / height);
+                    width *= ratio;
+                    height *= ratio;
+                }
+
+                // Centralizar imagem na posição determinada
+                const xPos = x + (maxImageWidth - width) / 2;
 
                 const embeddedImage = await pdfDoc.embedJpg(imageBytes);
                 firstPage.drawImage(embeddedImage, {
-                    x: x,
-                    y: y,
+                    x: xPos,
+                    y: 120,
                     width: width,
                     height: height
                 });
@@ -261,24 +272,6 @@
             // Abrir PDF em nova aba
             window.open(blobUrl);
         });
-
-        function resizeImage(originalWidth, originalHeight, maxWidth, maxHeight) {
-            let width = originalWidth;
-            let height = originalHeight;
-
-            if (width > maxWidth) {
-                const ratio = maxWidth / width;
-                width = maxWidth;
-                height *= ratio;
-            }
-            if (height > maxHeight) {
-                const ratio = maxHeight / height;
-                height = maxHeight;
-                width *= ratio;
-            }
-
-            return { width, height };
-        }
 
         document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
 
