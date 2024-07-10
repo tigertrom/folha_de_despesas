@@ -258,9 +258,10 @@
                     const maxImageHeight = 500;
                     for (let i = 0; i < images.length; i++) {
                         const img = images[i];
-                        const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-                        const imgType = img.src.split(';')[0].split(':')[1]; // Obtém o tipo de imagem (ex: "image/jpeg")
-                        const embeddedImage = await pdfDoc.embedJpg(imageBytes, { type: imgType });
+                        const imgBlob = await fetch(img.src).then(res => res.blob());
+const imgArrayBuffer = await new Response(imgBlob).arrayBuffer();
+const imgType = img.src.split(';')[0].split(':')[1]; // Obtém o tipo de imagem (ex: "image/jpeg")
+const embeddedImage = await pdfDoc.embedJpg(imgArrayBuffer, { type: imgType });
 
                         const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
                         const { x, y } = imageFieldPositions[fieldName];
