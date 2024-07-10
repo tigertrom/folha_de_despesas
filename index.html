@@ -227,125 +227,131 @@
                 height: 50,
             });
 
-            // Obter arquivos carregados
-const files = fileList.querySelectorAll('.preview img');
+// Adicionar imagens da div em uma nova página
 const images = Array.from(fileList.querySelectorAll('.preview img'));
+if (images.length === 1) {
+    const img = images[0];
+    const src = img.src;
+    const imageBytes = await fetch(src).then(res => res.arrayBuffer());
+    let image;
+    if (src.startsWith('data:image/jpeg')) {
+        image = await pdfDoc.embedJpg(imageBytes);
+    } else {
+        image = await pdfDoc.embedPng(imageBytes);
+    }
 
-if (files.length === 1) {
-    // Redimensionar imagem única para 500x500px
-    const img = files[0];
-    const { width, height } = await resizeImage(img.src, 500, 500);
-    const xPos = (firstPage.getWidth() - width) / 2;
-    const yPos = (firstPage.getHeight() - height) / 2;
-    const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-    const embeddedImage = await pdfDoc.embedJpg(imageBytes);
+    const dimensions = image.scale(1);
+    const totalWidth = imageFieldPositions["NOTA 2"].x + maxImageWidth - imageFieldPositions["NOTA 1"].x;
+    const scale = totalWidth / dimensions.width;
+    const scaledWidth = dimensions.width * scale;
+    const scaledHeight = dimensions.height * scale;
 
-    firstPage.drawImage(embeddedImage, {
-        x: xPos,
-        y: 120,
-        width: width,
-        height: height
+    firstPage.drawImage(image, {
+        x: imageFieldPositions["NOTA 1"].x,
+        y: imageFieldPositions["NOTA 1"].y,
+        width: scaledWidth,
+        height: scaledHeight,
     });
-} else {
-    // Adicionar outras imagens conforme necessário
-    if (images.length > 0) {
-        const imageFieldPositions = {
-            "NOTA 1": { x: 70, y: 120 },
-            "NOTA 2": { x: 320, y: 120 }
-        };
-        const maxImageWidth = 250;
-        const maxImageHeight = 500;
-        for (let i = 0; i < images.length; i++) {
-            const img = images[i];
-            const { width, height } = await resizeImage(img.src, maxImageWidth, maxImageHeight);
-            const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-            const embeddedImage = await pdfDoc.embedPng(imageBytes);
+} else if (images.length > 1) {
+    const maxImageWidth = 250;
+    const maxImageHeight = 500;
 
-            const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
-            const { x, y } = imageFieldPositions[fieldName];
-
-            firstPage.drawImage(embeddedImage, {
-                x: x,
-                y: y,
-                width: width,
-                height: height
-            });
+    for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        const src = img.src;
+        const imageBytes = await fetch(src).then(res => res.arrayBuffer());
+        let image;
+        if (src.startsWith('data:image/jpeg')) {
+            image = await pdfDoc.embedJpg(imageBytes);
+        } else {
+            image = await pdfDoc.embedPng(imageBytes);
         }
+
+        const dimensions = image.scale(1);
+        const scale = Math.min(maxImageWidth / dimensions.width, maxImageHeight / dimensions.height);
+        const scaledWidth = dimensions.width * scale;
+        const scaledHeight = dimensions.height * scale;
+
+        firstPage.drawImage(image, {
+            x: imageFieldPositions[`NOTA ${i + 1}`].x,
+            y: imageFieldPositions[`NOTA ${i + 1}`].y,
+            width: scaledWidth,
+            height: scaledHeight,
+        });
     }
 }
 
-async function resizeImage(src, maxWidth, maxHeight) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-            const width = img.width * ratio;
-            const height = img.height * ratio;
-            resolve({ width, height });
-        };
-        img.onerror = reject;
-        img.src = src;
-    });
-}
 
-            function resizeImage(imgWidth, imgHeight, maxWidth, maxHeight) {
-                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
-                return {
-                    width: imgWidth * ratio,
-                    height: imgHeight * ratio
-                };
-            }
-
-            const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+            // Salvar PDF atualizado
+            const pdfBytesUpdated = await pdfDoc.save();
+            const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
             const link = document.createElement('a');
-            link.href = pdfDataUri;
-            link.download = 'Espelho_de_Despesas.pdf';
+            link.href = URL.createObjectURL(blob);
+            link.download = 'ESPINHO_DE_DESPESAS_PREENCHIDO.pdf';
             link.click();
+
+            // Limpar o formulário após gerar o PDF
+            clearForm();
         });
 
-        document.getElementById('fileUpload').addEventListener('change', (event) => {
+        document.getElementById('fileUpload').addEventListener('change', function (event) {
             const files = event.target.files;
-
             for (const file of files) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = function (e) {
                     const img = document.createElement('img');
                     img.src = e.target.result;
-                    img.classList.add('preview');
-                    img.addEventListener('click', () => openCropper(img));
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '100%';
+                    addPreview(img); // Adiciona a pré-visualização diretamente
 
-                    const div = document.createElement('div');
-                    div.classList.add('preview');
-                    div.appendChild(img);
-
-                    const deleteButton = document.createElement('button');
-                    deleteButton.innerText = 'X';
-                    deleteButton.addEventListener('click', () => div.remove());
-                    div.appendChild(deleteButton);
-
-                    fileList.appendChild(div);
+                    // Abre o quadro de edição imediatamente após carregar a imagem
+                    openCropFrame(img);
                 };
                 reader.readAsDataURL(file);
             }
         });
 
-        function openCropper(image) {
-            const cropFrame = document.getElementById('cropFrame');
+        function addFile() {
+            document.getElementById('fileUpload').click();
+        }
+
+        function openCropFrame(image) {
+            document.getElementById('cropFrame').style.display = 'flex';
             const cropImage = document.getElementById('cropImage');
             cropImage.src = image.src;
-            cropFrame.style.display = 'flex';
 
             cropper = new Cropper(cropImage, {
                 aspectRatio: NaN,
                 viewMode: 1,
+                autoCropArea: 1,
+                responsive: true,
+                background: false,
+                rotatable: true,
+                scalable: true,
             });
 
+            document.getElementById('cropButton').onclick = () => cropper.crop();
+            document.getElementById('rotateLeftButton').onclick = () => cropper.rotate(-90);
+            document.getElementById('rotateRightButton').onclick = () => cropper.rotate(90);
             document.getElementById('applyCropButton').onclick = () => {
                 const canvas = cropper.getCroppedCanvas();
                 image.src = canvas.toDataURL();
                 cropper.destroy();
-                cropFrame.style.display = 'none';
+                document.getElementById('cropFrame').style.display = 'none';
+                addPreview(image);
             };
+        }
+
+        function addPreview(image) {
+            const div = document.createElement('div');
+            div.classList.add('preview');
+            const button = document.createElement('button');
+            button.textContent = 'X';
+            button.onclick = () => div.remove();
+            div.appendChild(image);
+            div.appendChild(button);
+            fileList.appendChild(div);
         }
     </script>
 </body>
