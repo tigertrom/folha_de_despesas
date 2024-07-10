@@ -287,13 +287,19 @@ if (images.length === 1) {
     }
 }
 
+            // Outras partes do seu código que usam formData
+            const autorDespesa = formData.get('autorDespesa');
+            const dataDespesa = formData.get('dataDespesa');
 
+            // Construir o nome do arquivo
+            const fileName = `ESPELHO_DE_DESPESAS_${autorDespesa}-${dataDespesa}.pdf`;
+            
             // Salvar PDF atualizado
             const pdfBytesUpdated = await pdfDoc.save();
             const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'ESPELHO_DE_DESPESAS_PREENCHIDO_${autorDespesa}_${dataDespesa}.pdf';
+            link.download = filename;
             link.click();
 
             // Limpar o formulário após gerar o PDF
