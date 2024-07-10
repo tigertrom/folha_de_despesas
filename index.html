@@ -222,14 +222,15 @@
             const firstPage = pages[0];
             firstPage.drawImage(signatureImage, {
                 x: 400,  // Ajuste conforme necessário
-                y: 150,  // Ajuste conforme necessário
+                y: 30,  // Ajuste conforme necessário
                 width: 150,
                 height: 50,
             });
 
             // Obter arquivos carregados
             const files = fileList.querySelectorAll('.preview img');
-
+            const images = Array.from(fileList.querySelectorAll('.preview img'));
+            
             if (files.length === 1) {
                 // Redimensionar imagem única para 500x500px
                 const img = files[0];
@@ -248,22 +249,38 @@
                 });
             } else {
                 // Adicionar outras imagens conforme necessário
-                for (let i = 0; i < files.length; i++) {
-                    const img = files[i];
-                    const imgWidth = 200;
-                    const imgHeight = 200;
-                    const xPos = i === 0 ? 50 : 300; // Exemplo de posições, ajuste conforme necessário
-                    const yPos = 50; // Exemplo de posição, ajuste conforme necessário
-                    const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
-                    const embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                if (images.length > 0) {
+                    const imageFieldPositions = {
+                        "NOTA 1": { x: 70, y: 120 },
+                        "NOTA 2": { x: 320, y: 120 }
+                    };
+                    const maxImageWidth = 250;
+                    const maxImageHeight = 500;
+                    for (let i = 0; i < images.length; i++) {
+                        const img = images[i];
+                        const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
+                        const embeddedImage = await pdfDoc.embedPng(imageBytes);
 
-                    firstPage.drawImage(embeddedImage, {
-                        x: xPos,
-                        y: yPos,
-                        width: imgWidth,
-                        height: imgHeight
-                    });
+                        const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
+                        const { x, y } = imageFieldPositions[fieldName];
+                        const { width, height } = resizeImage(embeddedImage.width, embeddedImage.height, maxImageWidth, maxImageHeight);
+
+                        firstPage.drawImage(embeddedImage, {
+                            x: x,
+                            y: y,
+                            width: width,
+                            height: height
+                        });
+                    }
                 }
+            }
+
+            function resizeImage(imgWidth, imgHeight, maxWidth, maxHeight) {
+                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                return {
+                    width: imgWidth * ratio,
+                    height: imgHeight * ratio
+                };
             }
 
             const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
