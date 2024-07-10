@@ -140,7 +140,7 @@
             <input type="text" id="classificacao" name="classificacao">
             <div class="file-upload-container">
                 <label for="fileUpload">Adicionar arquivos:</label>
-                <input type="file" id="fileUpload" accept="">
+                <input type="file" id="fileUpload" accept="image/*">
             </div>
             <div id="fileList" class="file-list"></div>
             <label for="signature">Assinatura:</label>
@@ -221,8 +221,8 @@
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
             firstPage.drawImage(signatureImage, {
-                x: 400,  // Ajuste conforme necessário
-                y: 30,  // Ajuste conforme necessário
+                x: 50,  // Ajuste conforme necessário
+                y: 150,  // Ajuste conforme necessário
                 width: signatureImage.width * 0.15,  // Ajuste conforme necessário
                 height: signatureImage.height * 0.15  // Ajuste conforme necessário
             });
@@ -289,12 +289,42 @@
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const imageUrl = event.target.result;
-                    const preview = createImagePreview(imageUrl);
-                    fileList.appendChild(preview);
+                    openImageEditor(imageUrl);  // Abrir editor de imagem após carregamento
                 };
                 reader.readAsDataURL(file);
             }
         }
+
+        function openImageEditor(imageUrl) {
+            const cropImage = document.getElementById('cropImage');
+            cropImage.src = imageUrl;
+
+            cropper = new Cropper(cropImage, {
+                aspectRatio: NaN,  // Permitir recorte livre
+                viewMode: 1,
+            });
+
+            document.getElementById('cropFrame').style.display = 'flex';
+        }
+
+        document.getElementById('rotateLeftButton').addEventListener('click', function() {
+            cropper.rotate(-90);
+        });
+
+        document.getElementById('rotateRightButton').addEventListener('click', function() {
+            cropper.rotate(90);
+        });
+
+        document.getElementById('applyCropButton').addEventListener('click', function() {
+            const canvas = cropper.getCroppedCanvas();
+            const croppedImage = canvas.toDataURL('image/jpeg');
+
+            const preview = createImagePreview(croppedImage);
+            fileList.appendChild(preview);  // Adicionar imagem à lista após edição
+
+            cropper.destroy();
+            document.getElementById('cropFrame').style.display = 'none';
+        });
 
         function createImagePreview(imageUrl) {
             const previewContainer = document.createElement('div');
@@ -317,41 +347,6 @@
 
             return previewContainer;
         }
-
-        document.getElementById('cropButton').addEventListener('click', function() {
-            const image = document.querySelector('.preview:last-of-type img');
-            if (image) {
-                const imageUrl = image.src;
-                const cropImage = document.getElementById('cropImage');
-                cropImage.src = imageUrl;
-
-                cropper = new Cropper(cropImage, {
-                    aspectRatio: NaN,  // Permitir recorte livre
-                    viewMode: 1,
-                });
-
-                document.getElementById('cropFrame').style.display = 'flex';
-            }
-        });
-
-        document.getElementById('rotateLeftButton').addEventListener('click', function() {
-            cropper.rotate(-90);
-        });
-
-        document.getElementById('rotateRightButton').addEventListener('click', function() {
-            cropper.rotate(90);
-        });
-
-        document.getElementById('applyCropButton').addEventListener('click', function() {
-            const canvas = cropper.getCroppedCanvas();
-            const croppedImage = canvas.toDataURL('image/jpeg');
-
-            const preview = createImagePreview(croppedImage);
-            fileList.replaceChild(preview, fileList.lastChild);
-
-            cropper.destroy();
-            document.getElementById('cropFrame').style.display = 'none';
-        });
 
     </script>
 </body>
