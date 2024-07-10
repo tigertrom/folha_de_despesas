@@ -297,8 +297,10 @@ if (images.length === 1) {
     }
 }
 
-// Obter dados do formulário
-const formData = new FormData(event.target);
+// Exemplo simplificado, ajuste conforme seu código
+const formData = new FormData(event.target); // Declare apenas uma vez, se possível
+
+// Outras partes do seu código que usam formData
 const autorDespesa = formData.get('autorDespesa');
 const dataDespesa = formData.get('dataDespesa');
 
@@ -312,7 +314,6 @@ const link = document.createElement('a');
 link.href = URL.createObjectURL(blob);
 link.download = fileName;
 link.click();
-
             // Limpar o formulário após gerar o PDF
             clearForm();
         });
