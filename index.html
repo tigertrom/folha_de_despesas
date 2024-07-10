@@ -140,7 +140,7 @@
             <input type="text" id="classificacao" name="classificacao">
             <div class="file-upload-container">
                 <label for="fileUpload">Adicionar arquivos:</label>
-                <input type="file" id="fileUpload" accept="image/*">
+                <input type="file" id="fileUpload" accept="">
             </div>
             <div id="fileList" class="file-list"></div>
             <label for="signature">Assinatura:</label>
@@ -227,120 +227,126 @@
                 height: 50,
             });
 
-            // Adicionar imagens ao PDF
-            const images = fileList.querySelectorAll('.preview img');
-            const imageFieldPositions = {
-                'NOTA 1': { x: 70, y: 120 },
-                'NOTA 2': { x: 320, y: 120 }
-            };
-            const maxImageWidth = 250;  // Ajuste conforme necessário
-            const maxImageHeight = 500;  // Ajuste conforme necessário
+            // Obter arquivos carregados
+const files = fileList.querySelectorAll('.preview img');
+const images = Array.from(fileList.querySelectorAll('.preview img'));
 
-            for (let i = 0; i < images.length; i++) {
-                const img = images[i];
-                const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
+if (files.length === 1) {
+    // Redimensionar imagem única para 500x500px
+    const img = files[0];
+    const { width, height } = await resizeImage(img.src, 500, 500);
+    const xPos = (firstPage.getWidth() - width) / 2;
+    const yPos = (firstPage.getHeight() - height) / 2;
+    const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
+    const embeddedImage = await pdfDoc.embedJpg(imageBytes);
 
-                const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
-                const { x, y } = imageFieldPositions[fieldName];
-                let width = img.width;
-                let height = img.height;
+    firstPage.drawImage(embeddedImage, {
+        x: xPos,
+        y: 120,
+        width: width,
+        height: height
+    });
+} else {
+    // Adicionar outras imagens conforme necessário
+    if (images.length > 0) {
+        const imageFieldPositions = {
+            "NOTA 1": { x: 70, y: 120 },
+            "NOTA 2": { x: 320, y: 120 }
+        };
+        const maxImageWidth = 250;
+        const maxImageHeight = 500;
+        for (let i = 0; i < images.length; i++) {
+            const img = images[i];
+            const { width, height } = await resizeImage(img.src, maxImageWidth, maxImageHeight);
+            const imageBytes = await fetch(img.src).then(res => res.arrayBuffer());
+            const embeddedImage = await pdfDoc.embedPng(imageBytes);
 
-                // Redimensionar imagem se exceder os limites máximos
-                if (width > maxImageWidth || height > maxImageHeight) {
-                    const ratio = Math.min(maxImageWidth / width, maxImageHeight / height);
-                    width *= ratio;
-                    height *= ratio;
-                }
+            const fieldName = i === 0 ? 'NOTA 1' : 'NOTA 2';
+            const { x, y } = imageFieldPositions[fieldName];
 
-                // Centralizar imagem na posição determinada
-                const xPos = x + (maxImageWidth - width) / 2;
+            firstPage.drawImage(embeddedImage, {
+                x: x,
+                y: y,
+                width: width,
+                height: height
+            });
+        }
+    }
+}
 
-                const embeddedImage = await pdfDoc.embedJpg(imageBytes);
-                firstPage.drawImage(embeddedImage, {
-                    x: xPos,
-                    y: 120,
-                    width: width,
-                    height: height
-                });
+async function resizeImage(src, maxWidth, maxHeight) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            const width = img.width * ratio;
+            const height = img.height * ratio;
+            resolve({ width, height });
+        };
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+            function resizeImage(imgWidth, imgHeight, maxWidth, maxHeight) {
+                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                return {
+                    width: imgWidth * ratio,
+                    height: imgHeight * ratio
+                };
             }
 
-            // Salvar PDF modificado
-            const pdfBytesModified = await pdfDoc.save();
-            const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(blob);
-
-            // Abrir PDF em nova aba
-            window.open(blobUrl);
+            const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+            const link = document.createElement('a');
+            link.href = pdfDataUri;
+            link.download = 'Espelho_de_Despesas.pdf';
+            link.click();
         });
 
-        document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
-
-        function handleFileUpload(event) {
+        document.getElementById('fileUpload').addEventListener('change', (event) => {
             const files = event.target.files;
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+
+            for (const file of files) {
                 const reader = new FileReader();
-                reader.onload = function(event) {
-                    const imageUrl = event.target.result;
-                    openImageEditor(imageUrl);  // Abrir editor de imagem após carregamento
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.classList.add('preview');
+                    img.addEventListener('click', () => openCropper(img));
+
+                    const div = document.createElement('div');
+                    div.classList.add('preview');
+                    div.appendChild(img);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.innerText = 'X';
+                    deleteButton.addEventListener('click', () => div.remove());
+                    div.appendChild(deleteButton);
+
+                    fileList.appendChild(div);
                 };
                 reader.readAsDataURL(file);
             }
-        }
+        });
 
-        function openImageEditor(imageUrl) {
+        function openCropper(image) {
+            const cropFrame = document.getElementById('cropFrame');
             const cropImage = document.getElementById('cropImage');
-            cropImage.src = imageUrl;
+            cropImage.src = image.src;
+            cropFrame.style.display = 'flex';
 
             cropper = new Cropper(cropImage, {
-                aspectRatio: NaN,  // Permitir recorte livre
+                aspectRatio: NaN,
                 viewMode: 1,
             });
 
-            document.getElementById('cropFrame').style.display = 'flex';
-        }
-
-        document.getElementById('rotateLeftButton').addEventListener('click', function() {
-            cropper.rotate(-90);
-        });
-
-        document.getElementById('rotateRightButton').addEventListener('click', function() {
-            cropper.rotate(90);
-        });
-
-        document.getElementById('applyCropButton').addEventListener('click', function() {
-            const canvas = cropper.getCroppedCanvas();
-            const croppedImage = canvas.toDataURL('image/jpeg');
-
-            const preview = createImagePreview(croppedImage);
-            fileList.appendChild(preview);  // Adicionar imagem à lista após edição
-
-            cropper.destroy();
-            document.getElementById('cropFrame').style.display = 'none';
-        });
-
-        function createImagePreview(imageUrl) {
-            const previewContainer = document.createElement('div');
-            previewContainer.classList.add('preview');
-
-            const img = document.createElement('img');
-            img.src = imageUrl;
-            img.onload = function() {
-                URL.revokeObjectURL(img.src);
+            document.getElementById('applyCropButton').onclick = () => {
+                const canvas = cropper.getCroppedCanvas();
+                image.src = canvas.toDataURL();
+                cropper.destroy();
+                cropFrame.style.display = 'none';
             };
-
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Excluir';
-            deleteButton.addEventListener('click', function() {
-                previewContainer.remove();
-            });
-
-            previewContainer.appendChild(img);
-            previewContainer.appendChild(deleteButton);
-
-            return previewContainer;
         }
-
     </script>
 </body>
 </html>
