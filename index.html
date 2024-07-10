@@ -299,7 +299,7 @@ if (images.length === 1) {
             const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = filename;
+            link.download = fileName;
             link.click();
 
             // Limpar o formulário após gerar o PDF
