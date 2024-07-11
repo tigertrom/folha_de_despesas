@@ -24,7 +24,7 @@
             background-color: #003399;
             box-sizing: border-box;
         }
-        input[type="text"], input[type="file"], input[type="date"], .-pad {
+        input[type="text"], input[type="file"], input[type="date"], .signature-pad {
             width: 100%;
             margin-bottom: 10px;
             padding: 5px;
@@ -64,7 +64,7 @@
         .preview:hover button {
             opacity: 1;
         }
- #signature {
+        #signature {
             border: 1px solid white;
             height: 200px;
             margin-bottom: 10px;
@@ -75,7 +75,6 @@
             width: 100%;
             height: 100%;
         }
-
         .file-upload-container {
             display: flex;
             flex-direction: column;
@@ -151,7 +150,7 @@
             </div>
             <button type="submit">Gerar PDF</button>
         </form>
-        <h1 style="font-size: 12px;">Powered by Tiago Ferreira©</h1>
+        <h1>Powered by Tiago Ferreira©</h1>
     </div>
     <div id="cropFrame">
         <div id="cropContainer">
@@ -168,7 +167,7 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
-const canvas = document.querySelector('#signature canvas');
+        const canvas = document.querySelector('#signature canvas');
         const signaturePad = new SignaturePad(canvas);
         let cropper;
 
@@ -182,6 +181,12 @@ const canvas = document.querySelector('#signature canvas');
         function clearSignature() {
             signaturePad.clear();
         }
+
+        const form = document.getElementById('expenseForm');
+        const fileList = document.getElementById('fileList');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
 
             // Carregar o PDF
             const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
@@ -216,7 +221,7 @@ const canvas = document.querySelector('#signature canvas');
             const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
-            firstPage.drawImage(Image, {
+            firstPage.drawImage(signatureImage, {
                 x: 400,  // Ajuste conforme necessário
                 y: 30,  // Ajuste conforme necessário
                 width: 150,
