@@ -167,21 +167,24 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
-        const canvas = document.querySelector('#signature canvas');
-        const signaturePad = new SignaturePad(canvas);
-        let cropper;
+            const canvas = document.querySelector('#signature canvas');
+    const signaturePad = new SignaturePad(canvas);
 
-        function clearForm() {
-            document.getElementById('expenseForm').reset();
-            signaturePad.clear();
-            const fileList = document.getElementById('fileList');
-            fileList.innerHTML = '';
-        }
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+        signaturePad.clear(); // Reseta o pad de assinatura após redimensionar
+    }
 
-        function clearSignature() {
-            signaturePad.clear();
-        }
+    // Redimensionar o canvas inicialmente e ao redimensionar a janela
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
+    function clearSignature() {
+        signaturePad.clear();
+    }
         const form = document.getElementById('expenseForm');
         const fileList = document.getElementById('fileList');
 
