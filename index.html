@@ -167,6 +167,15 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
+
+// Obtenha os elementos canvas e o botão de limpeza
+const canvas = document.getElementById('signaturePad');
+const clearButton = document.getElementById('clearSignatureButton');
+
+// Inicialize o SignaturePad
+const signaturePad = new SignaturePad(canvas);
+
+        
     // Função para redimensionar o canvas
 function resizeCanvas() {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
