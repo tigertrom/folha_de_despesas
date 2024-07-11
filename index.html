@@ -24,7 +24,7 @@
             background-color: #003399;
             box-sizing: border-box;
         }
-        input[type="text"], input[type="file"], input[type="date"], .signature-pad {
+        input[type="text"], input[type="file"], input[type="date"], .-pad {
             width: 100%;
             margin-bottom: 10px;
             padding: 5px;
@@ -64,17 +64,23 @@
         .preview:hover button {
             opacity: 1;
         }
-        #signature {
-            border: 1px solid white;
-            height: 200px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-        #signature canvas {
-            border: 1px solid white;
-            width: 100%;
-            height: 100%;
-        }
+#signature {
+    border: 1px solid white;
+    height: 200px; /* Ajuste conforme necessário */
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+#signature canvas {
+    border: 1px solid white;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #FFFFFF; /* Fundo branco para evitar transparência */
+}
         .file-upload-container {
             display: flex;
             flex-direction: column;
@@ -167,27 +173,40 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
-        const canvas = document.querySelector('#signature canvas');
-        const signaturePad = new SignaturePad(canvas);
-        let cropper;
+const canvas = document.querySelector('#signature canvas');
+const ctx = canvas.getContext('2d');
 
-        function clearForm() {
-            document.getElementById('expenseForm').reset();
-            signaturePad.clear();
-            const fileList = document.getElementById('fileList');
-            fileList.innerHTML = '';
-        }
+// Obter o tamanho do dispositivo para definir o tamanho do canvas
+const devicePixelRatio = window.devicePixelRatio || 1;
+const canvasWidth = canvas.offsetWidth * devicePixelRatio;
+const canvasHeight = canvas.offsetHeight * devicePixelRatio;
 
-        function clearSignature() {
-            signaturePad.clear();
-        }
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
 
-        const form = document.getElementById('expenseForm');
-        const fileList = document.getElementById('fileList');
+// Limpar o canvas definindo a cor de fundo como branco
+ctx.fillStyle = '#FFFFFF';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
+const signaturePad = new SignaturePad(canvas, {
+    backgroundColor: '#FFFFFF', // Definir o fundo branco para o SignaturePad
+    minWidth: 1, // Largura mínima da linha
+    maxWidth: 4, // Largura máxima da linha
+    penColor: 'black' // Cor da caneta
+});
 
+let cropper;
+
+function clearForm() {
+    document.getElementById('expenseForm').reset();
+    signaturePad.clear();
+    const fileList = document.getElementById('fileList');
+    fileList.innerHTML = '';
+}
+
+function clearSignature() {
+    signaturePad.clear();
+}
 
             // Carregar o PDF
             const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
@@ -222,7 +241,7 @@
             const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
-            firstPage.drawImage(signatureImage, {
+            firstPage.drawImage(Image, {
                 x: 400,  // Ajuste conforme necessário
                 y: 30,  // Ajuste conforme necessário
                 width: 150,
