@@ -167,32 +167,27 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
-const canvas = document.querySelector('#signature canvas');
-const ctx = canvas.getContext('2d');
+        const canvas = document.querySelector('#signature canvas');
+        const signaturePad = new SignaturePad(canvas);
+        let cropper;
 
-// Limpar o canvas definindo a cor de fundo como branco
-ctx.fillStyle = '#FFFFFF';
-ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function clearForm() {
+            document.getElementById('expenseForm').reset();
+            signaturePad.clear();
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+        }
 
-const signaturePad = new SignaturePad(canvas);
-let cropper;
-
-function clearForm() {
-    document.getElementById('expenseForm').reset();
-    signaturePad.clear();
-    const fileList = document.getElementById('fileList');
-    fileList.innerHTML = '';
-}
-
-function clearSignature() {
-    signaturePad.clear();
-}
+        function clearSignature() {
+            signaturePad.clear();
+        }
 
         const form = document.getElementById('expenseForm');
         const fileList = document.getElementById('fileList');
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
+
 
             // Carregar o PDF
             const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
