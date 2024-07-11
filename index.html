@@ -167,29 +167,41 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
-            const canvas = document.querySelector('#signature canvas');
-    const signaturePad = new SignaturePad(canvas);
+    // Função para redimensionar o canvas
+function resizeCanvas() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    canvas.getContext("2d").scale(ratio, ratio);
+    signaturePad.clear(); // Reseta o pad de assinatura após redimensionar
+}
 
-    function resizeCanvas() {
-        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        canvas.width = canvas.offsetWidth * ratio;
-        canvas.height = canvas.offsetHeight * ratio;
-        canvas.getContext("2d").scale(ratio, ratio);
-        signaturePad.clear(); // Reseta o pad de assinatura após redimensionar
-    }
+// Redimensionar o canvas inicialmente e ao redimensionar a janela
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-    // Redimensionar o canvas inicialmente e ao redimensionar a janela
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+// Função para limpar a assinatura
+function clearSignature() {
+    signaturePad.clear();
+}
 
-    function clearSignature() {
-        signaturePad.clear();
-    }
-        const form = document.getElementById('expenseForm');
-        const fileList = document.getElementById('fileList');
+// Função para limpar o formulário
+function clearForm() {
+    // Limpar os campos de texto e data
+    form.reset();
 
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
+    // Limpar a assinatura
+    clearSignature();
+
+    // Limpar a lista de arquivos
+    fileList.innerHTML = '';
+}
+
+const form = document.getElementById('expenseForm');
+const fileList = document.getElementById('fileList');
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
 
             // Carregar o PDF
             const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
