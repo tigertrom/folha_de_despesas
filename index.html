@@ -170,6 +170,8 @@
         const canvas = document.querySelector('#signature canvas');
         const signaturePad = new SignaturePad(canvas);
         let cropper;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         function clearForm() {
             document.getElementById('expenseForm').reset();
