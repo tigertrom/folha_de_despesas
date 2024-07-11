@@ -242,8 +242,6 @@ if (images.length === 1) {
     const img = images[0];
     const src = img.src;
     const imageBytes = await fetch(src).then(res => res.arrayBuffer());
-    const maxImageWidth = 500;
-    const maxImageHeight = 500;
     let image;
     if (src.startsWith('data:image/jpeg')) {
         image = await pdfDoc.embedJpg(imageBytes);
@@ -252,8 +250,10 @@ if (images.length === 1) {
     }
 
     const dimensions = image.scale(1);
-    const totalWidth = imageFieldPositions["NOTA 2"].x + maxImageWidth - imageFieldPositions["NOTA 1"].x;
-    const scale = totalWidth / dimensions.width;
+
+    // Limitar o tamanho da imagem para caber dentro de 500x500px
+    const maxSize = 500;
+    const scale = Math.min(maxSize / dimensions.width, maxSize / dimensions.height);
     const scaledWidth = dimensions.width * scale;
     const scaledHeight = dimensions.height * scale;
 
