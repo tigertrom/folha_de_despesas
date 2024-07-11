@@ -242,6 +242,8 @@ if (images.length === 1) {
     const img = images[0];
     const src = img.src;
     const imageBytes = await fetch(src).then(res => res.arrayBuffer());
+    const maxImageWidth = 500;
+    const maxImageHeight = 500;
     let image;
     if (src.startsWith('data:image/jpeg')) {
         image = await pdfDoc.embedJpg(imageBytes);
