@@ -149,6 +149,7 @@
                 <canvas></canvas>
             </div>
             <button type="submit">Gerar PDF</button>
+            <div id="statusMessage"></div>
         </form>
         <h1 style="font-size: 14px">Todos os direitos reservados SINDGUARDAS-SP©</h1>
     </div>
@@ -164,40 +165,45 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
-    <script>
-        const canvas = document.querySelector('#signature canvas');
-        const signaturePad = new SignaturePad(canvas);
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+<script>
+    const canvas = document.querySelector('#signature canvas');
+    const signaturePad = new SignaturePad(canvas);
 
-        function resizeCanvas() {
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            canvas.width = canvas.offsetWidth * ratio;
-            canvas.height = canvas.offsetHeight * ratio;
-            canvas.getContext("2d").scale(ratio, ratio);
-            signaturePad.clear(); // Reseta o pad de assinatura após redimensionar
-        }
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+        signaturePad.clear(); // Reseta o pad de assinatura após redimensionar
+    }
 
-        // Redimensionar o canvas inicialmente e ao redimensionar a janela
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+    // Redimensionar o canvas inicialmente e ao redimensionar a janela
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-        function clearSignature() {
-            signaturePad.clear();
-        }
+    function clearSignature() {
+        signaturePad.clear();
+    }
 
-        function clearForm() {
-            document.getElementById('expenseForm').reset(); // Reseta todos os campos do formulário
-            fileList.innerHTML = ''; // Limpa a lista de pré-visualizações de imagens
-            signaturePad.clear(); // Limpa o pad de assinatura
-        }
+    function clearForm() {
+        document.getElementById('expenseForm').reset(); // Reseta todos os campos do formulário
+        fileList.innerHTML = ''; // Limpa a lista de pré-visualizações de imagens
+        signaturePad.clear(); // Limpa o pad de assinatura
+    }
 
-        const form = document.getElementById('expenseForm');
-        const fileList = document.getElementById('fileList');
+    const form = document.getElementById('expenseForm');
+    const fileList = document.getElementById('fileList');
+    const statusMessage = document.getElementById('statusMessage'); // Elemento de mensagem de status
 
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
 
+        // Exibir mensagem de status de carregamento
+        statusMessage.textContent = 'Gerando PDF...';
+
+        try {
             // Carregar o PDF
             const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
             const pdfBytes = await fetch(pdfPath).then(res => {
@@ -313,67 +319,75 @@
 
             // Limpar o formulário após gerar o PDF
             clearForm();
-        });
 
-        document.getElementById('fileUpload').addEventListener('change', function (event) {
-            const files = event.target.files;
-            for (const file of files) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.style.maxWidth = '100%';
-                    img.style.maxHeight = '100%';
-                    addPreview(img); // Adiciona a pré-visualização diretamente
-
-                    // Abre o quadro de edição imediatamente após carregar a imagem
-                    openCropFrame(img);
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        function addFile() {
-            document.getElementById('fileUpload').click();
+            // Exibir mensagem de sucesso
+            statusMessage.textContent = 'PDF gerado com sucesso!';
+        } catch (error) {
+            console.error(error);
+            // Exibir mensagem de erro
+            statusMessage.textContent = 'Erro ao gerar PDF.';
         }
+    });
 
-        function openCropFrame(image) {
-            document.getElementById('cropFrame').style.display = 'flex';
-            const cropImage = document.getElementById('cropImage');
-            cropImage.src = image.src;
+    document.getElementById('fileUpload').addEventListener('change', function (event) {
+        const files = event.target.files;
+        for (const file of files) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+                addPreview(img); // Adiciona a pré-visualização diretamente
 
-            cropper = new Cropper(cropImage, {
-                aspectRatio: NaN,
-                viewMode: 1,
-                autoCropArea: 1,
-                responsive: true,
-                background: false,
-                rotatable: true,
-                scalable: true,
-            });
-
-            document.getElementById('cropButton').onclick = () => cropper.crop();
-            document.getElementById('rotateLeftButton').onclick = () => cropper.rotate(-90);
-            document.getElementById('rotateRightButton').onclick = () => cropper.rotate(90);
-            document.getElementById('applyCropButton').onclick = () => {
-                const canvas = cropper.getCroppedCanvas();
-                image.src = canvas.toDataURL();
-                cropper.destroy();
-                document.getElementById('cropFrame').style.display = 'none';
-                addPreview(image);
+                // Abre o quadro de edição imediatamente após carregar a imagem
+                openCropFrame(img);
             };
+            reader.readAsDataURL(file);
         }
+    });
 
-        function addPreview(image) {
-            const div = document.createElement('div');
-            div.classList.add('preview');
-            const button = document.createElement('button');
-            button.textContent = 'X';
-            button.onclick = () => div.remove();
-            div.appendChild(image);
-            div.appendChild(button);
-            fileList.appendChild(div);
-        }
-    </script>
+    function addFile() {
+        document.getElementById('fileUpload').click();
+    }
+
+    function openCropFrame(image) {
+        document.getElementById('cropFrame').style.display = 'flex';
+        const cropImage = document.getElementById('cropImage');
+        cropImage.src = image.src;
+
+        cropper = new Cropper(cropImage, {
+            aspectRatio: NaN,
+            viewMode: 1,
+            autoCropArea: 1,
+            responsive: true,
+            background: false,
+            rotatable: true,
+            scalable: true,
+        });
+
+        document.getElementById('cropButton').onclick = () => cropper.crop();
+        document.getElementById('rotateLeftButton').onclick = () => cropper.rotate(-90);
+        document.getElementById('rotateRightButton').onclick = () => cropper.rotate(90);
+        document.getElementById('applyCropButton').onclick = () => {
+            const canvas = cropper.getCroppedCanvas();
+            image.src = canvas.toDataURL();
+            cropper.destroy();
+            document.getElementById('cropFrame').style.display = 'none';
+            addPreview(image);
+        };
+    }
+
+    function addPreview(image) {
+        const div = document.createElement('div');
+        div.classList.add('preview');
+        const button = document.createElement('button');
+        button.textContent = 'X';
+        button.onclick = () => div.remove();
+        div.appendChild(image);
+        div.appendChild(button);
+        fileList.appendChild(div);
+    }
+</script>
 </body>
 </html>
