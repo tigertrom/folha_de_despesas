@@ -185,7 +185,7 @@
             <img id="cropImage" style="max-width: 100%; max-height: 80%;" />
         </div>
     </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 <script>
@@ -214,11 +214,21 @@
         signaturePad.clear(); // Limpa o pad de assinatura
     }
 
-    const form = document.getElementById('expenseForm');
-    const fileList = document.getElementById('fileList');
-    const statusMessage = document.getElementById('statusMessage');
-    const statusText = document.getElementById('statusText');
-    const loader = document.querySelector('.loader');
+    function textToImage(text) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const fontSize = 16; // Tamanho da fonte
+            ctx.font = `${fontSize}px Arial`;
+            const textWidth = ctx.measureText(text).width;
+            const textHeight = fontSize;
+            canvas.width = textWidth;
+            canvas.height = textHeight;
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillText(text, 0, fontSize);
+            canvas.toBlob((blob) => resolve(blob));
+        });
+    }
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -247,14 +257,34 @@
             const banco = formData.get('banco');
             const classificacao = formData.get('classificacao');
 
-            // Preencher campos do formulário no PDF
-            form.getTextField('VALOR R$').setText(valor);
-            form.getTextField('DATA DA DESPESA').setText(dataDespesa);
-            form.getTextField('TIPO DE DESPESA').setText(tipoDespesa);
-            form.getTextField('MOTIVO DA DESPESA').setText(motivoDespesa);
-            form.getTextField('AUTOR DA DESPESA').setText(autorDespesa);
-            form.getTextField('BANCO - CONTA').setText(banco);
-            form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
+            // Adicionar texto como imagem
+            const textFieldPositions = {
+                "VALOR R$": { x: 150, y: 500 },
+                "DATA DA DESPESA": { x: 150, y: 470 },
+                "TIPO DE DESPESA": { x: 150, y: 440 },
+                "MOTIVO DA DESPESA": { x: 150, y: 410 },
+                "AUTOR DA DESPESA": { x: 150, y: 380 },
+                "BANCO - CONTA": { x: 150, y: 350 },
+                "CLASSIFICAÇÃO": { x: 150, y: 320 },
+            };
+
+            // Adicionar imagens de texto para cada campo
+            for (const [fieldName, { x, y }] of Object.entries(textFieldPositions)) {
+                const text = formData.get(fieldName);
+                if (text) {
+                    const textImageBlob = await textToImage(text);
+                    const textImageBytes = await textImageBlob.arrayBuffer();
+                    const textImage = await pdfDoc.embedPng(textImageBytes);
+                    const pages = pdfDoc.getPages();
+                    const firstPage = pages[0];
+                    firstPage.drawImage(textImage, {
+                        x: x,  // Ajuste conforme necessário
+                        y: y,  // Ajuste conforme necessário
+                        width: textImage.width / 2,  // Ajuste o tamanho conforme necessário
+                        height: textImage.height / 2,  // Ajuste o tamanho conforme necessário
+                    });
+                }
+            }
 
             // Adicionar assinatura sobre o campo "Solicitante"
             const signatureDataUrl = signaturePad.toDataURL('image/png');
