@@ -185,158 +185,208 @@
             <img id="cropImage" style="max-width: 100%; max-height: 80%;" />
         </div>
     </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
-<script>
-    const canvas = document.querySelector('#signature canvas');
-    const signaturePad = new SignaturePad(canvas);
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <style>
+        /* Estilos básicos para o formulário e outras partes da página */
+        .preview {
+            display: inline-block;
+            position: relative;
+            margin: 10px;
+        }
+        .preview img {
+            max-width: 100px;
+            max-height: 100px;
+        }
+        .preview button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #cropFrame {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        #cropImage {
+            max-width: 90%;
+            max-height: 90%;
+        }
+    </style>
+</head>
+<body>
+    <form id="expenseForm">
+        <!-- Campos do formulário -->
+        <input type="text" name="valor" placeholder="Valor" required>
+        <input type="date" name="dataDespesa" required>
+        <input type="text" name="tipoDespesa" placeholder="Tipo de despesa" required>
+        <input type="text" name="motivoDespesa" placeholder="Motivo da despesa" required>
+        <input type="text" name="autorDespesa" placeholder="Autor da despesa" required>
+        <input type="text" name="banco" placeholder="Banco - Conta" required>
+        <input type="text" name="classificacao" placeholder="Classificação" required>
+        <input type="file" id="fileUpload" multiple accept="image/*" style="display:none">
+        <button type="button" onclick="addFile()">Adicionar Imagens</button>
+        <div id="fileList"></div>
+        <button type="submit">Gerar PDF</button>
+    </form>
+    <div id="statusMessage">
+        <span id="statusText"></span>
+        <div class="loader" style="display: none;">Loading...</div>
+    </div>
 
-    function resizeCanvas() {
-        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        canvas.width = canvas.offsetWidth * ratio;
-        canvas.height = canvas.offsetHeight * ratio;
-        canvas.getContext("2d").scale(ratio, ratio);
-        signaturePad.clear(); // Reseta o pad de assinatura após redimensionar
-    }
+    <div id="cropFrame">
+        <img id="cropImage" src="" alt="Crop Image">
+        <button id="cropButton">Crop</button>
+        <button id="rotateLeftButton">Rotate Left</button>
+        <button id="rotateRightButton">Rotate Right</button>
+        <button id="applyCropButton">Apply Crop</button>
+    </div>
 
-    // Redimensionar o canvas inicialmente e ao redimensionar a janela
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    <div id="signature">
+        <canvas></canvas>
+    </div>
 
-    function clearSignature() {
-        signaturePad.clear();
-    }
+    <script>
+        const canvas = document.querySelector('#signature canvas');
+        const signaturePad = new SignaturePad(canvas);
 
-    function clearForm() {
-        document.getElementById('expenseForm').reset(); // Reseta todos os campos do formulário
-        fileList.innerHTML = ''; // Limpa a lista de pré-visualizações de imagens
-        signaturePad.clear(); // Limpa o pad de assinatura
-    }
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext("2d").scale(ratio, ratio);
+            signaturePad.clear(); // Reseta o pad de assinatura após redimensionar
+        }
 
-    function textToImage(text) {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const fontSize = 16; // Tamanho da fonte
-            ctx.font = `${fontSize}px Arial`;
-            const textWidth = ctx.measureText(text).width;
-            const textHeight = fontSize;
-            canvas.width = textWidth;
-            canvas.height = textHeight;
-            ctx.font = `${fontSize}px Arial`;
-            ctx.fillText(text, 0, fontSize);
-            canvas.toBlob((blob) => resolve(blob));
-        });
-    }
+        // Redimensionar o canvas inicialmente e ao redimensionar a janela
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
+        function clearSignature() {
+            signaturePad.clear();
+        }
 
-        // Exibir mensagem de status de carregamento
-        loader.style.display = 'inline-block';
-        statusText.textContent = 'Gerando PDF...';
+        function clearForm() {
+            document.getElementById('expenseForm').reset(); // Reseta todos os campos do formulário
+            fileList.innerHTML = ''; // Limpa a lista de pré-visualizações de imagens
+            signaturePad.clear(); // Limpa o pad de assinatura
+        }
 
-        try {
-            // Carregar o PDF
-            const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
-            const pdfBytes = await fetch(pdfPath).then(res => {
-                if (!res.ok) throw new Error('Erro ao carregar o PDF');
-                return res.arrayBuffer();
+        function textToImage(text) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const fontSize = 16; // Tamanho da fonte
+                ctx.font = `${fontSize}px Arial`;
+                const textWidth = ctx.measureText(text).width;
+                const textHeight = fontSize;
+                canvas.width = textWidth;
+                canvas.height = textHeight;
+                ctx.font = `${fontSize}px Arial`;
+                ctx.fillText(text, 0, fontSize);
+                canvas.toBlob((blob) => resolve(blob));
             });
-            const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
-            const form = pdfDoc.getForm();
+        }
 
-            // Obter dados do formulário
-            const formData = new FormData(event.target);
-            const valor = formData.get('valor');
-            const dataDespesa = new Date(formData.get('dataDespesa')).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-            const tipoDespesa = formData.get('tipoDespesa');
-            const motivoDespesa = formData.get('motivoDespesa');
-            const autorDespesa = formData.get('autorDespesa');
-            const banco = formData.get('banco');
-            const classificacao = formData.get('classificacao');
+        const form = document.getElementById('expenseForm');
+        const fileList = document.getElementById('fileList');
+        const statusMessage = document.getElementById('statusMessage');
+        const statusText = document.getElementById('statusText');
+        const loader = document.querySelector('.loader');
 
-            // Adicionar texto como imagem
-            const textFieldPositions = {
-                "VALOR R$": { x: 150, y: 500 },
-                "DATA DA DESPESA": { x: 150, y: 470 },
-                "TIPO DE DESPESA": { x: 150, y: 440 },
-                "MOTIVO DA DESPESA": { x: 150, y: 410 },
-                "AUTOR DA DESPESA": { x: 150, y: 380 },
-                "BANCO - CONTA": { x: 150, y: 350 },
-                "CLASSIFICAÇÃO": { x: 150, y: 320 },
-            };
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
 
-            // Adicionar imagens de texto para cada campo
-            for (const [fieldName, { x, y }] of Object.entries(textFieldPositions)) {
-                const text = formData.get(fieldName);
-                if (text) {
-                    const textImageBlob = await textToImage(text);
-                    const textImageBytes = await textImageBlob.arrayBuffer();
-                    const textImage = await pdfDoc.embedPng(textImageBytes);
-                    const pages = pdfDoc.getPages();
-                    const firstPage = pages[0];
-                    firstPage.drawImage(textImage, {
-                        x: x,  // Ajuste conforme necessário
-                        y: y,  // Ajuste conforme necessário
-                        width: textImage.width / 2,  // Ajuste o tamanho conforme necessário
-                        height: textImage.height / 2,  // Ajuste o tamanho conforme necessário
-                    });
-                }
-            }
+            // Exibir mensagem de status de carregamento
+            loader.style.display = 'inline-block';
+            statusText.textContent = 'Gerando PDF...';
 
-            // Adicionar assinatura sobre o campo "Solicitante"
-            const signatureDataUrl = signaturePad.toDataURL('image/png');
-            const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-            const pages = pdfDoc.getPages();
-            const firstPage = pages[0];
-            firstPage.drawImage(signatureImage, {
-                x: 400,  // Ajuste conforme necessário
-                y: 30,  // Ajuste conforme necessário
-                width: 150,
-                height: 50,
-            });
-
-            // Definição de imageFieldPositions
-            const imageFieldPositions = {
-                "NOTA 1": { x: 70, y: 120 },
-                "NOTA 2": { x: 320, y: 120 }
-            };
-
-            // Adicionar imagens da div em uma nova página
-            const images = Array.from(fileList.querySelectorAll('.preview img'));
-            const maxImageWidth = 250;
-            const maxImageHeight = 500;
-
-            if (images.length === 1) {
-                const img = images[0];
-                const src = img.src;
-                const imageBytes = await fetch(src).then(res => res.arrayBuffer());
-                let image;
-                if (src.startsWith('data:image/jpeg')) {
-                    image = await pdfDoc.embedJpg(imageBytes);
-                } else {
-                    image = await pdfDoc.embedPng(imageBytes);
-                }
-
-                const dimensions = image.scale(1);
-
-                // Limitar o tamanho da imagem para caber dentro de 500x500px
-                const maxSize = 500;
-                const scale = Math.min(maxSize / dimensions.width, maxSize / dimensions.height);
-                const scaledWidth = dimensions.width * scale;
-                const scaledHeight = dimensions.height * scale;
-
-                firstPage.drawImage(image, {
-                    x: imageFieldPositions["NOTA 1"].x,
-                    y: imageFieldPositions["NOTA 1"].y,
-                    width: scaledWidth,
-                    height: scaledHeight,
+            try {
+                // Carregar o PDF
+                const pdfPath = 'pdf/ESPELHO_DE_DESPESAS.pdf'; // Caminho relativo ao arquivo PDF
+                const pdfBytes = await fetch(pdfPath).then(res => {
+                    if (!res.ok) throw new Error('Erro ao carregar o PDF');
+                    return res.arrayBuffer();
                 });
-            } else if (images.length > 1) {
-                for (let i = 0; i < images.length; i++) {
-                    const img = images[i];
+                const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+                const form = pdfDoc.getForm();
+
+                // Obter dados do formulário
+                const formData = new FormData(event.target);
+                const valor = formData.get('valor');
+                const dataDespesa = new Date(formData.get('dataDespesa')).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                const tipoDespesa = formData.get('tipoDespesa');
+                const motivoDespesa = formData.get('motivoDespesa');
+                const autorDespesa = formData.get('autorDespesa');
+                const banco = formData.get('banco');
+                const classificacao = formData.get('classificacao');
+
+                // Adicionar texto como imagem
+                const textFieldPositions = {
+                    "VALOR R$": { x: 150, y: 500 },
+                    "DATA DA DESPESA": { x: 150, y: 470 },
+                    "TIPO DE DESPESA": { x: 150, y: 440 },
+                    "MOTIVO DA DESPESA": { x: 150, y: 410 },
+                    "AUTOR DA DESPESA": { x: 150, y: 380 },
+                    "BANCO - CONTA": { x: 150, y: 350 },
+                    "CLASSIFICAÇÃO": { x: 150, y: 320 },
+                };
+
+                // Adicionar imagens de texto para cada campo
+                for (const [fieldName, { x, y }] of Object.entries(textFieldPositions)) {
+                    const text = formData.get(fieldName);
+                    if (text) {
+                        const textImageBlob = await textToImage(text);
+                        const textImageBytes = await textImageBlob.arrayBuffer();
+                        const textImage = await pdfDoc.embedPng(textImageBytes);
+                        const pages = pdfDoc.getPages();
+                        const firstPage = pages[0];
+                        firstPage.drawImage(textImage, {
+                            x: x,  // Ajuste conforme necessário
+                            y: y,  // Ajuste conforme necessário
+                            width: textImage.width / 2,  // Ajuste o tamanho conforme necessário
+                            height: textImage.height / 2,  // Ajuste o tamanho conforme necessário
+                        });
+                    }
+                }
+
+                // Adicionar assinatura sobre o campo "Solicitante"
+                const signatureDataUrl = signaturePad.toDataURL('image/png');
+                const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
+                const pages = pdfDoc.getPages();
+                const firstPage = pages[0];
+                firstPage.drawImage(signatureImage, {
+                    x: 400,  // Ajuste conforme necessário
+                    y: 30,  // Ajuste conforme necessário
+                    width: 150,
+                    height: 50,
+                });
+
+                // Definição de imageFieldPositions
+                const imageFieldPositions = {
+                    "NOTA 1": { x: 70, y: 120 },
+                    "NOTA 2": { x: 320, y: 120 }
+                };
+
+                // Adicionar imagens da div em uma nova página
+                const images = Array.from(fileList.querySelectorAll('.preview img'));
+                const maxImageWidth = 250;
+                const maxImageHeight = 500;
+
+                if (images.length === 1) {
+                    const img = images[0];
                     const src = img.src;
                     const imageBytes = await fetch(src).then(res => res.arrayBuffer());
                     let image;
@@ -347,104 +397,130 @@
                     }
 
                     const dimensions = image.scale(1);
-                    const scale = Math.min(maxImageWidth / dimensions.width, maxImageHeight / dimensions.height);
+
+                    // Limitar o tamanho da imagem para caber dentro de 500x500px
+                    const maxSize = 500;
+                    const scale = Math.min(maxSize / dimensions.width, maxSize / dimensions.height);
                     const scaledWidth = dimensions.width * scale;
                     const scaledHeight = dimensions.height * scale;
 
                     firstPage.drawImage(image, {
-                        x: imageFieldPositions[`NOTA ${i + 1}`].x,
-                        y: imageFieldPositions[`NOTA ${i + 1}`].y,
+                        x: imageFieldPositions["NOTA 1"].x,
+                        y: imageFieldPositions["NOTA 1"].y,
                         width: scaledWidth,
                         height: scaledHeight,
                     });
+                } else if (images.length > 1) {
+                    for (let i = 0; i < images.length; i++) {
+                        const img = images[i];
+                        const src = img.src;
+                        const imageBytes = await fetch(src).then(res => res.arrayBuffer());
+                        let image;
+                        if (src.startsWith('data:image/jpeg')) {
+                            image = await pdfDoc.embedJpg(imageBytes);
+                        } else {
+                            image = await pdfDoc.embedPng(imageBytes);
+                        }
+
+                        const dimensions = image.scale(1);
+                        const scale = Math.min(maxImageWidth / dimensions.width, maxImageHeight / dimensions.height);
+                        const scaledWidth = dimensions.width * scale;
+                        const scaledHeight = dimensions.height * scale;
+
+                        firstPage.drawImage(image, {
+                            x: imageFieldPositions[`NOTA ${i + 1}`].x,
+                            y: imageFieldPositions[`NOTA ${i + 1}`].y,
+                            width: scaledWidth,
+                            height: scaledHeight,
+                        });
+                    }
                 }
+
+                // Construir o nome do arquivo
+                const fileName = `ESPELHO_DE_DESPESAS_${autorDespesa}-${dataDespesa}.pdf`;
+
+                // Salvar PDF atualizado
+                const pdfBytesUpdated = await pdfDoc.save();
+                const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.click();
+
+                // Limpar o formulário após gerar o PDF
+                clearForm();
+
+                // Exibir mensagem de sucesso
+                statusText.textContent = 'PDF gerado com sucesso!';
+            } catch (error) {
+                console.error(error);
+                // Exibir mensagem de erro
+                statusText.textContent = 'Erro ao gerar PDF.';
+            } finally {
+                // Ocultar o loader após a operação
+                loader.style.display = 'none';
             }
-
-            // Construir o nome do arquivo
-            const fileName = `ESPELHO_DE_DESPESAS_${autorDespesa}-${dataDespesa}.pdf`;
-
-            // Salvar PDF atualizado
-            const pdfBytesUpdated = await pdfDoc.save();
-            const blob = new Blob([pdfBytesUpdated], { type: 'application/pdf' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = fileName;
-            link.click();
-
-            // Limpar o formulário após gerar o PDF
-            clearForm();
-
-            // Exibir mensagem de sucesso
-            statusText.textContent = 'PDF gerado com sucesso!';
-        } catch (error) {
-            console.error(error);
-            // Exibir mensagem de erro
-            statusText.textContent = 'Erro ao gerar PDF.';
-        } finally {
-            // Ocultar o loader após a operação
-            loader.style.display = 'none';
-        }
-    });
-
-    document.getElementById('fileUpload').addEventListener('change', function (event) {
-        const files = event.target.files;
-        for (const file of files) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.style.maxWidth = '100%';
-                img.style.maxHeight = '100%';
-                addPreview(img); // Adiciona a pré-visualização diretamente
-
-                // Abre o quadro de edição imediatamente após carregar a imagem
-                openCropFrame(img);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    function addFile() {
-        document.getElementById('fileUpload').click();
-    }
-
-    function openCropFrame(image) {
-        document.getElementById('cropFrame').style.display = 'flex';
-        const cropImage = document.getElementById('cropImage');
-        cropImage.src = image.src;
-
-        cropper = new Cropper(cropImage, {
-            aspectRatio: NaN,
-            viewMode: 1,
-            autoCropArea: 1,
-            responsive: true,
-            background: false,
-            rotatable: true,
-            scalable: true,
         });
 
-        document.getElementById('cropButton').onclick = () => cropper.crop();
-        document.getElementById('rotateLeftButton').onclick = () => cropper.rotate(-90);
-        document.getElementById('rotateRightButton').onclick = () => cropper.rotate(90);
-        document.getElementById('applyCropButton').onclick = () => {
-            const canvas = cropper.getCroppedCanvas();
-            image.src = canvas.toDataURL();
-            cropper.destroy();
-            document.getElementById('cropFrame').style.display = 'none';
-            addPreview(image);
-        };
-    }
+        document.getElementById('fileUpload').addEventListener('change', function (event) {
+            const files = event.target.files;
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '100%';
+                    addPreview(img); // Adiciona a pré-visualização diretamente
 
-    function addPreview(image) {
-        const div = document.createElement('div');
-        div.classList.add('preview');
-        const button = document.createElement('button');
-        button.textContent = 'X';
-        button.onclick = () => div.remove();
-        div.appendChild(image);
-        div.appendChild(button);
-        fileList.appendChild(div);
-    }
-</script>
+                    // Abre o quadro de edição imediatamente após carregar a imagem
+                    openCropFrame(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function addFile() {
+            document.getElementById('fileUpload').click();
+        }
+
+        function openCropFrame(image) {
+            document.getElementById('cropFrame').style.display = 'flex';
+            const cropImage = document.getElementById('cropImage');
+            cropImage.src = image.src;
+
+            const cropper = new Cropper(cropImage, {
+                aspectRatio: NaN,
+                viewMode: 1,
+                autoCropArea: 1,
+                responsive: true,
+                background: false,
+                rotatable: true,
+                scalable: true,
+            });
+
+            document.getElementById('cropButton').onclick = () => cropper.crop();
+            document.getElementById('rotateLeftButton').onclick = () => cropper.rotate(-90);
+            document.getElementById('rotateRightButton').onclick = () => cropper.rotate(90);
+            document.getElementById('applyCropButton').onclick = () => {
+                const canvas = cropper.getCroppedCanvas();
+                image.src = canvas.toDataURL();
+                cropper.destroy();
+                document.getElementById('cropFrame').style.display = 'none';
+                addPreview(image);
+            };
+        }
+
+        function addPreview(image) {
+            const div = document.createElement('div');
+            div.classList.add('preview');
+            const button = document.createElement('button');
+            button.textContent = 'X';
+            button.onclick = () => div.remove();
+            div.appendChild(image);
+            div.appendChild(button);
+            fileList.appendChild(div);
+        }
+    </script>
 </body>
 </html>
