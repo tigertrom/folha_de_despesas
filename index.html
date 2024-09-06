@@ -248,15 +248,6 @@
             const classificacao = formData.get('classificacao');
 
             // Preencher campos do formulário no PDF
-            const formData = new FormData(event.target);
-        const valor = formData.get('valor');
-        const dataDespesa = new Date(formData.get('dataDespesa')).toLocaleDateString('pt-BR');
-        const tipoDespesa = formData.get('tipoDespesa');
-        const motivoDespesa = formData.get('motivoDespesa');
-        const autorDespesa = formData.get('autorDespesa');
-        const banco = formData.get('banco');
-        const classificacao = formData.get('classificacao');
-
         ctx.fillText(`Valor (R$): ${valor}`, 50, 100);
         ctx.fillText(`Data da despesa: ${dataDespesa}`, 50, 130);
         ctx.fillText(`Tipo de despesa: ${tipoDespesa}`, 50, 160);
