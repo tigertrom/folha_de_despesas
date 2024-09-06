@@ -248,13 +248,22 @@
             const classificacao = formData.get('classificacao');
 
             // Preencher campos do formulário no PDF
-            form.getTextField('VALOR R$').setText(valor);
-            form.getTextField('DATA DA DESPESA').setText(dataDespesa);
-            form.getTextField('TIPO DE DESPESA').setText(tipoDespesa);
-            form.getTextField('MOTIVO DA DESPESA').setText(motivoDespesa);
-            form.getTextField('AUTOR DA DESPESA').setText(autorDespesa);
-            form.getTextField('BANCO - CONTA').setText(banco);
-            form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
+            const formData = new FormData(event.target);
+        const valor = formData.get('valor');
+        const dataDespesa = new Date(formData.get('dataDespesa')).toLocaleDateString('pt-BR');
+        const tipoDespesa = formData.get('tipoDespesa');
+        const motivoDespesa = formData.get('motivoDespesa');
+        const autorDespesa = formData.get('autorDespesa');
+        const banco = formData.get('banco');
+        const classificacao = formData.get('classificacao');
+
+        ctx.fillText(`Valor (R$): ${valor}`, 50, 100);
+        ctx.fillText(`Data da despesa: ${dataDespesa}`, 50, 130);
+        ctx.fillText(`Tipo de despesa: ${tipoDespesa}`, 50, 160);
+        ctx.fillText(`Motivo da despesa: ${motivoDespesa}`, 50, 190);
+        ctx.fillText(`Autor da despesa: ${autorDespesa}`, 50, 220);
+        ctx.fillText(`Banco: ${banco}`, 50, 250);
+        ctx.fillText(`Classificação: ${classificacao}`, 50, 280);
 
             // Adicionar assinatura sobre o campo "Solicitante"
             const signatureDataUrl = signaturePad.toDataURL('image/png');
