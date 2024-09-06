@@ -185,7 +185,7 @@
             <img id="cropImage" style="max-width: 100%; max-height: 80%;" />
         </div>
     </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 <script>
@@ -220,6 +220,19 @@
     const statusText = document.getElementById('statusText');
     const loader = document.querySelector('.loader');
 
+    async function textToImage(text, fontSize = 12, width = 300) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = `${fontSize}px Arial`;
+        context.textAlign = 'left';
+        context.textBaseline = 'top';
+        canvas.width = width;
+        canvas.height = fontSize * 2; // Ajustar altura para acomodar o texto
+        context.fillStyle = 'black';
+        context.fillText(text, 0, 0);
+        return canvas.toDataURL('image/png');
+    }
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
@@ -247,20 +260,42 @@
             const banco = formData.get('banco');
             const classificacao = formData.get('classificacao');
 
-            // Preencher campos do formulário no PDF
-            form.getTextField('VALOR R$').setText(valor);
-            form.getTextField('DATA DA DESPESA').setText(dataDespesa);
-            form.getTextField('TIPO DE DESPESA').setText(tipoDespesa);
-            form.getTextField('MOTIVO DA DESPESA').setText(motivoDespesa);
-            form.getTextField('AUTOR DA DESPESA').setText(autorDespesa);
-            form.getTextField('BANCO - CONTA').setText(banco);
-            form.getTextField('CLASSIFICAÇÃO').setText(classificacao);
+            // Gerar imagens para os textos
+            const valorImage = await textToImage(valor, 12);
+            const dataDespesaImage = await textToImage(dataDespesa, 12);
+            const tipoDespesaImage = await textToImage(tipoDespesa, 12);
+            const motivoDespesaImage = await textToImage(motivoDespesa, 12);
+            const autorDespesaImage = await textToImage(autorDespesa, 12);
+            const bancoImage = await textToImage(banco, 12);
+            const classificacaoImage = await textToImage(classificacao, 12);
+
+            // Adicionar as imagens ao PDF
+            const pages = pdfDoc.getPages();
+            const firstPage = pages[0];
+
+            const imageFields = [
+                { fieldName: 'VALOR R$', imageData: valorImage, x: 50, y: 700 },
+                { fieldName: 'DATA DA DESPESA', imageData: dataDespesaImage, x: 50, y: 670 },
+                { fieldName: 'TIPO DE DESPESA', imageData: tipoDespesaImage, x: 50, y: 640 },
+                { fieldName: 'MOTIVO DA DESPESA', imageData: motivoDespesaImage, x: 50, y: 610 },
+                { fieldName: 'AUTOR DA DESPESA', imageData: autorDespesaImage, x: 50, y: 580 },
+                { fieldName: 'BANCO - CONTA', imageData: bancoImage, x: 50, y: 550 },
+                { fieldName: 'CLASSIFICAÇÃO', imageData: classificacaoImage, x: 50, y: 520 },
+            ];
+
+            for (const { fieldName, imageData, x, y } of imageFields) {
+                const image = await pdfDoc.embedPng(imageData);
+                firstPage.drawImage(image, {
+                    x,
+                    y,
+                    width: image.width,
+                    height: image.height,
+                });
+            }
 
             // Adicionar assinatura sobre o campo "Solicitante"
             const signatureDataUrl = signaturePad.toDataURL('image/png');
             const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-            const pages = pdfDoc.getPages();
-            const firstPage = pages[0];
             firstPage.drawImage(signatureImage, {
                 x: 400,  // Ajuste conforme necessário
                 y: 30,  // Ajuste conforme necessário
