@@ -274,22 +274,22 @@
             const firstPage = pages[0];
 
             const imageFields = [
-                { fieldName: 'VALOR R$', imageData: valorImage, x: 50, y: 700 },
-                { fieldName: 'DATA DA DESPESA', imageData: dataDespesaImage, x: 50, y: 670 },
-                { fieldName: 'TIPO DE DESPESA', imageData: tipoDespesaImage, x: 50, y: 640 },
-                { fieldName: 'MOTIVO DA DESPESA', imageData: motivoDespesaImage, x: 50, y: 610 },
-                { fieldName: 'AUTOR DA DESPESA', imageData: autorDespesaImage, x: 50, y: 580 },
-                { fieldName: 'BANCO - CONTA', imageData: bancoImage, x: 50, y: 550 },
-                { fieldName: 'CLASSIFICAÇÃO', imageData: classificacaoImage, x: 50, y: 520 },
+                { fieldName: 'VALOR R$', imageData: valorImage, x: 400, y: 700, width: 150, height: 20 },
+                { fieldName: 'DATA DA DESPESA', imageData: dataDespesaImage, x: 400, y: 670, width: 150, height: 20 },
+                { fieldName: 'TIPO DE DESPESA', imageData: tipoDespesaImage, x: 400, y: 640, width: 150, height: 20 },
+                { fieldName: 'MOTIVO DA DESPESA', imageData: motivoDespesaImage, x: 400, y: 610, width: 150, height: 20 },
+                { fieldName: 'AUTOR DA DESPESA', imageData: autorDespesaImage, x: 400, y: 580, width: 150, height: 20 },
+                { fieldName: 'BANCO - CONTA', imageData: bancoImage, x: 400, y: 550, width: 150, height: 20 },
+                { fieldName: 'CLASSIFICAÇÃO', imageData: classificacaoImage, x: 400, y: 520, width: 150, height: 20 },
             ];
 
-            for (const { fieldName, imageData, x, y } of imageFields) {
+            for (const { fieldName, imageData, x, y, width, height } of imageFields) {
                 const image = await pdfDoc.embedPng(imageData);
                 firstPage.drawImage(image, {
                     x,
                     y,
-                    width: image.width,
-                    height: image.height,
+                    width,
+                    height,
                 });
             }
 
