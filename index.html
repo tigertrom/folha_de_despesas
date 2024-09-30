@@ -360,7 +360,7 @@ form.addEventListener('submit', async (event) => {
         }
 
         // Construir o nome do arquivo
-        const fileName = `ESPELHO_DE_DESPESAS_${autorDespesa}-${dataDespesa}.pdf`;
+        const fileName = `ESPELHO_DE_DESPESAS_${autorDespesa}-${dataDespesa}_${valor}.pdf`;
 
         // Salvar PDF atualizado
         const pdfBytesUpdated = await pdfDoc.save();
